@@ -29,18 +29,18 @@
   .lang button[aria-pressed="true"]{background:var(--navy);color:var(--paper)}
   .lang button:focus-visible{outline:2px solid var(--leaf);outline-offset:-2px}
   main{flex:1;display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:clamp(28px,5vw,72px);
-       align-items:center;max-width:1120px;margin:0 auto;padding:16px clamp(16px,5vw,56px) 48px;width:100%}
-  figure{position:relative;isolation:isolate}
+       align-items:start;max-width:1120px;margin:0 auto;padding:16px clamp(16px,5vw,56px) 48px;width:100%}
+  figure{position:relative;isolation:isolate;margin-top:var(--title-offset,42px)}
   figure img{display:block;width:100%;height:auto;aspect-ratio:2/3;object-fit:cover;border-radius:4px;
        box-shadow:0 30px 60px -30px rgba(20,25,40,.45)}
   figure::after{content:"";position:absolute;inset:14px -14px -14px 14px;border:1px solid var(--line);
        border-radius:4px;z-index:-1}
-  .eyebrow{font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--leaf);margin-bottom:14px}
+  .eyebrow{line-height:20px;font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--leaf);margin-bottom:14px}
   h1{font-weight:400;font-size:clamp(40px,6vw,68px);line-height:1.02;letter-spacing:-.01em;margin-bottom:10px}
   .role{color:var(--muted);font-size:16px;margin-bottom:30px}
   .bio p{margin-bottom:16px;max-width:58ch}
   .bio p:first-child{font-size:20px;line-height:1.5}
-  .bio a{color:inherit;text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--leaf)}
+  .bio a{color:inherit;text-decoration:none;border-bottom:1px solid var(--leaf)}
   .bio a:hover{color:var(--leaf)}
   .links{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:30px;max-width:520px}
   .links a{display:flex;align-items:center;gap:12px;padding:14px 16px;border:1px solid var(--line);border-radius:10px;
@@ -57,6 +57,9 @@
   .links .arc{font-size:17px}
   .links a.banner{grid-column:1/-1;padding:9px 16px;background:#ff4b16;border-color:#ff4b16;justify-content:flex-start}
   .links a.banner img{display:block;height:55px;width:auto}
+  .mail{margin-top:18px;font-size:15px}
+  .mail a{color:var(--muted);text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--line)}
+  .mail a:hover{color:var(--ink);text-decoration-color:var(--leaf)}
   footer{padding:18px clamp(16px,5vw,56px);color:var(--muted);font-size:13px;display:flex;justify-content:space-between;
        gap:12px;flex-wrap:wrap;border-top:1px solid var(--line)}
   footer a{color:inherit}
@@ -64,6 +67,7 @@
   @media (max-width:760px){
     main{grid-template-columns:1fr;padding-top:4px}
     figure{max-width:340px;margin:0 auto 6px;width:78%}
+    figure{--title-offset:0px}
     figure::after{inset:10px -10px -10px 10px}
     .links{grid-template-columns:1fr}
   }
@@ -94,17 +98,17 @@
 
     <div class="bio" data-lang="en">
       <p class="serif">I’ve always been drawn to how things are made and how they work. University and my engineering career answered much of that curiosity, and so I went further, toward a more spiritual and emotional perspective on life through art.</p>
-      <p>I approached both areas with initiatives of my own: a call for innovation with <strong>ciinum apparatics</strong>, and in art by starting to collect and co-initiating <strong><span class="arc" aria-label="arc"><span>a</span><span>r</span><span>c</span></span></strong>.</p>
+      <p>I approached both areas with initiatives of my own: a call for innovation with <a href="https://ciinumapparatics.com" target="_blank" rel="noopener"><strong>ciinum apparatics</strong></a>, and in art by starting to collect and co-initiating <a href="https://arc-ism.com" target="_blank" rel="noopener"><strong><span class="arc" aria-label="arc"><span>a</span><span>r</span><span>c</span></span></strong></a>.</p>
       <p>Years of working on engineering projects taught me that good ideas and the best quality only come about when passionate people take charge and keep grinding until every expectation is exceeded.</p>
       <p>That’s why I want to build an engineering project for people with initiative and ideas of their own, from transportation to energy storage to everyday devices.</p>
-      <p>Art is the other half of me. I collect contemporary paintings and drawings, mostly figurative work by young artists, and I value the people behind the works as much as the works themselves. Out of that grew <strong><span class="arc" aria-label="arc"><span>a</span><span>r</span><span>c</span></span></strong>, a network I co-initiated that turns the one-time transaction between artist and collector into a lasting relationship.</p>
+      <p>Art is the other half of me. I collect contemporary paintings and drawings, mostly figurative work by young artists, and I value the people behind the works as much as the works themselves. Out of that grew <a href="https://arc-ism.com" target="_blank" rel="noopener"><strong><span class="arc" aria-label="arc"><span>a</span><span>r</span><span>c</span></span></strong></a>, a network I co-initiated that turns the one-time transaction between artist and collector into a lasting relationship.</p>
     </div>
     <div class="bio" data-lang="de">
       <p class="serif">Mich hat schon immer interessiert, wie Dinge gemacht sind und wie sie funktionieren. Studium und Ingenieurlaufbahn haben viel von dieser Neugier beantwortet, und so bin ich weitergegangen, hin zu einem spirituelleren und emotionaleren Blick auf das Leben durch die Kunst.</p>
-      <p>Beiden Bereichen habe ich mich mit eigenen Initiativen genähert: mit <strong>ciinum apparatics</strong> als Aufruf zur Innovation, und in der Kunst, indem ich zu sammeln begann und <strong><span class="arc" aria-label="arc"><span>a</span><span>r</span><span>c</span></span></strong> mitinitiiert habe.</p>
+      <p>Beiden Bereichen habe ich mich mit eigenen Initiativen genähert: mit <a href="https://ciinumapparatics.com" target="_blank" rel="noopener"><strong>ciinum apparatics</strong></a> als Aufruf zur Innovation, und in der Kunst, indem ich zu sammeln begann und <a href="https://arc-ism.com" target="_blank" rel="noopener"><strong><span class="arc" aria-label="arc"><span>a</span><span>r</span><span>c</span></span></strong></a> mitinitiiert habe.</p>
       <p>Jahre in Ingenieurprojekten haben mich gelehrt, dass gute Ideen und beste Qualität nur entstehen, wenn leidenschaftliche Menschen Verantwortung übernehmen und dranbleiben, bis alle Erwartungen übertroffen sind.</p>
       <p>Deshalb möchte ich ein Ingenieurprojekt für Menschen mit Eigeninitiative und eigenen Ideen aufbauen, von Mobilität über Energiespeicher bis zu Alltagsgeräten.</p>
-      <p>Die Kunst ist meine andere Hälfte. Ich sammle zeitgenössische Malerei und Zeichnung, vor allem figurative Arbeiten junger Künstler:innen, und schätze die Menschen hinter den Werken genauso wie die Werke selbst. Daraus ist <strong><span class="arc" aria-label="arc"><span>a</span><span>r</span><span>c</span></span></strong> entstanden, ein Netzwerk, das ich mitinitiiert habe und das die einmalige Transaktion zwischen Künstler:in und Sammler:in in eine dauerhafte Beziehung verwandelt.</p>
+      <p>Die Kunst ist meine andere Hälfte. Ich sammle zeitgenössische Malerei und Zeichnung, vor allem figurative Arbeiten junger Künstler:innen, und schätze die Menschen hinter den Werken genauso wie die Werke selbst. Daraus ist <a href="https://arc-ism.com" target="_blank" rel="noopener"><strong><span class="arc" aria-label="arc"><span>a</span><span>r</span><span>c</span></span></strong></a> entstanden, ein Netzwerk, das ich mitinitiiert habe und das die einmalige Transaktion zwischen Künstler:in und Sammler:in in eine dauerhafte Beziehung verwandelt.</p>
     </div>
 
     <nav class="links" aria-label="Links">
@@ -115,17 +119,14 @@
       </a>
       <a href="https://www.linkedin.com/in/andreivintu/" target="_blank" rel="noopener">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9.5h4v11H3zm7 0h3.8v1.6h.05c.53-1 1.83-2.05 3.77-2.05 4.03 0 4.78 2.65 4.78 6.1v5.35h-4v-4.75c0-1.13-.02-2.6-1.58-2.6-1.59 0-1.83 1.24-1.83 2.52v4.83h-4z"/></svg>
-        LinkedIn
+        <span data-lang="en">Andrei’s LinkedIn</span><span data-lang="de">Andreis LinkedIn</span>
       </a>
       <a href="https://www.instagram.com/andrei.vntu/" target="_blank" rel="noopener">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r=".9" fill="currentColor"/></svg>
-        Instagram
-      </a>
-      <a href="mailto:contact@andreivintu.com" style="grid-column:1/-1">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 6 8.5 7 8.5-7"/></svg>
-        contact@andreivintu.com
+        <span data-lang="en">Andrei’s Instagram</span><span data-lang="de">Andreis Instagram</span>
       </a>
     </nav>
+    <p class="mail"><a href="mailto:contact@andreivintu.com">contact@andreivintu.com</a></p>
   </section>
 </main>
 
