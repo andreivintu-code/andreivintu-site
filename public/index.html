@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Andrei Vîntu</title>
+<meta name="description" content="Andrei Vîntu: mechanical engineer with a passion for industrial design and contemporary art, based in Frankfurt am Main.">
+<meta property="og:title" content="Andrei Vîntu">
+<meta property="og:image" content="https://andreivintu.com/andrei-vintu.jpg">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231f2a44'/%3E%3Ctext x='32' y='42' font-family='Georgia,serif' font-size='28' fill='%23f4efe6' text-anchor='middle'%3EAV%3C/text%3E%3C/svg%3E">
+<style>
+  :root{
+    --paper:#f4efe6; --ink:#1c1f26; --muted:#5f6470; --line:#d9d1c3;
+    --navy:#1f2a44; --leaf:#3d5a3a; --card:#fbf8f2;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --paper:#14161b; --ink:#ece7dd; --muted:#a3a7b0; --line:#2c3038;
+      --navy:#c9d3ea; --leaf:#9cbf96; --card:#1b1e24; }
+  }
+  *{box-sizing:border-box;margin:0}
+  html,body{background:var(--paper);color:var(--ink)}
+  body{font:17px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+       min-height:100vh;display:flex;flex-direction:column}
+  .serif{font-family:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif}
+  header{display:flex;justify-content:space-between;align-items:center;padding:22px clamp(16px,5vw,56px)}
+  .mark{font-size:15px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+  .lang{display:flex;border:1px solid var(--line);border-radius:999px;overflow:hidden}
+  .lang button{all:unset;cursor:pointer;padding:6px 14px;font-size:13px;letter-spacing:.08em;color:var(--muted)}
+  .lang button[aria-pressed="true"]{background:var(--navy);color:var(--paper)}
+  .lang button:focus-visible{outline:2px solid var(--leaf);outline-offset:-2px}
+  main{flex:1;display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:clamp(28px,5vw,72px);
+       align-items:center;max-width:1120px;margin:0 auto;padding:16px clamp(16px,5vw,56px) 48px;width:100%}
+  figure{position:relative;isolation:isolate}
+  figure img{display:block;width:100%;height:auto;aspect-ratio:2/3;object-fit:cover;border-radius:4px;
+       box-shadow:0 30px 60px -30px rgba(20,25,40,.45)}
+  figure::after{content:"";position:absolute;inset:14px -14px -14px 14px;border:1px solid var(--line);
+       border-radius:4px;z-index:-1}
+  .eyebrow{font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--leaf);margin-bottom:14px}
+  h1{font-weight:400;font-size:clamp(40px,6vw,68px);line-height:1.02;letter-spacing:-.01em;margin-bottom:10px}
+  .role{color:var(--muted);font-size:16px;margin-bottom:30px}
+  .bio p{margin-bottom:16px;max-width:58ch}
+  .bio p:first-child{font-size:20px;line-height:1.5}
+  .links{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:30px;max-width:520px}
+  .links a{display:flex;align-items:center;gap:12px;padding:14px 16px;border:1px solid var(--line);border-radius:10px;
+       background:var(--card);color:var(--ink);text-decoration:none;font-size:15px;transition:border-color .2s,transform .2s}
+  .links a:hover{border-color:var(--navy);transform:translateY(-1px)}
+  .links a:focus-visible{outline:2px solid var(--leaf);outline-offset:2px}
+  .links a.primary{grid-column:1/-1;background:var(--navy);border-color:var(--navy);color:var(--paper)}
+  .links svg{width:20px;height:20px;flex:none}
+  .links small{display:block;color:inherit;opacity:.7;font-size:12.5px}
+  footer{padding:18px clamp(16px,5vw,56px);color:var(--muted);font-size:13px;display:flex;justify-content:space-between;
+       gap:12px;flex-wrap:wrap;border-top:1px solid var(--line)}
+  footer a{color:inherit}
+  html:not([lang="en"]) [data-lang="en"], html:not([lang="de"]) [data-lang="de"]{display:none!important}
+  @media (max-width:760px){
+    main{grid-template-columns:1fr;padding-top:4px}
+    figure{max-width:340px;margin:0 auto 6px;width:78%}
+    figure::after{inset:10px -10px -10px 10px}
+    .links{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<header>
+  <span class="mark">andreivintu.com</span>
+  <div class="lang" role="group" aria-label="Language">
+    <button type="button" data-set="en" aria-pressed="true">EN</button>
+    <button type="button" data-set="de" aria-pressed="false">DE</button>
+  </div>
+</header>
+
+<main>
+  <figure><img src="andrei-vintu.jpg" alt="Portrait of Andrei Vîntu" width="800" height="1200"></figure>
+
+  <section>
+    <p class="eyebrow">
+      <span data-lang="en">Engineering · Design · Art</span>
+      <span data-lang="de">Ingenieurwesen · Design · Kunst</span>
+    </p>
+    <h1 class="serif">Andrei Vîntu</h1>
+    <p class="role">
+      <span data-lang="en">Mechanical Engineer · Industrial Design · <span style="white-space:nowrap">Art Collector</span> · <span style="white-space:nowrap">Frankfurt am Main</span></span>
+      <span data-lang="de">Maschinenbauingenieur · Industriedesign · <span style="white-space:nowrap">Kunstsammler</span> · <span style="white-space:nowrap">Frankfurt am Main</span></span>
+    </p>
+
+    <div class="bio" data-lang="en">
+      <p class="serif">I studied mechanical engineering and have spent more than 15 years turning technical ideas into working reality.</p>
+      <p>I started as a design engineer for three years, then worked for 13 years as a project engineer in engineering companies, taking projects from concept and design through to delivery.</p>
+      <p>With my engineering project <strong>Ciinum Apparatics</strong>, I’m looking for like-minded people to develop new ideas from sketch to product, from transportation to energy storage and everyday devices.</p>
+      <p>Alongside engineering, I have a passion for industrial design and art. I collect contemporary painting and drawing, mostly figurative and abstract-expressionist work, and I like to know the people behind it: studio visits, openings, long conversations. That interest led to <strong>ARC-ISM</strong>, a curated network I run that turns the one-time sale between artist and collector into a lasting relationship.</p>
+    </div>
+    <div class="bio" data-lang="de">
+      <p class="serif">Ich habe Maschinenbau studiert und setze seit über 15 Jahren technische Ideen in die Realität um.</p>
+      <p>Nach drei Jahren als Konstrukteur war ich 13 Jahre als Projektingenieur in Ingenieurunternehmen tätig und habe Projekte von Konzept und Konstruktion bis zur Umsetzung begleitet.</p>
+      <p>Mit meinem Ingenieurprojekt <strong>Ciinum Apparatics</strong> suche ich Gleichgesinnte, um neue Ideen von der Skizze bis zum Produkt zu entwickeln, von Mobilität über Energiespeicher bis zu Alltagsgeräten.</p>
+      <p>Neben der Technik gilt meine Leidenschaft dem Industriedesign und der Kunst. Ich sammle zeitgenössische Malerei und Zeichnung, vor allem figurative und abstrakt-expressionistische Arbeiten, und lerne gern die Menschen dahinter kennen: Atelierbesuche, Eröffnungen, lange Gespräche. Daraus ist <strong>ARC-ISM</strong> entstanden, ein kuratiertes Netzwerk, das ich betreibe und das den einmaligen Kauf zwischen Künstler:in und Sammler:in zu einer dauerhaften Beziehung macht.</p>
+    </div>
+
+    <nav class="links" aria-label="Links">
+      <a class="primary" href="https://arc-ism.com" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M5 17 12 5l7 12M8.5 12.5h7"/></svg>
+        <span>ARC-ISM <small data-lang="en">Artists &amp; collectors in collaboration</small><small data-lang="de">Künstler:innen &amp; Sammler:innen im Austausch</small></span>
+      </a>
+      <a href="https://ciinumapparatics.com" target="_blank" rel="noopener" style="grid-column:1/-1">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg>
+        <span>Ciinum Apparatics <small data-lang="en">Engineering project</small><small data-lang="de">Ingenieurprojekt</small></span>
+      </a>
+      <a href="https://www.linkedin.com/in/andreivintu/" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9.5h4v11H3zm7 0h3.8v1.6h.05c.53-1 1.83-2.05 3.77-2.05 4.03 0 4.78 2.65 4.78 6.1v5.35h-4v-4.75c0-1.13-.02-2.6-1.58-2.6-1.59 0-1.83 1.24-1.83 2.52v4.83h-4z"/></svg>
+        LinkedIn
+      </a>
+      <a href="https://www.instagram.com/andrei.vntu/" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r=".9" fill="currentColor"/></svg>
+        Instagram
+      </a>
+      <a href="mailto:contact@andreivintu.com" style="grid-column:1/-1">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 6 8.5 7 8.5-7"/></svg>
+        contact@andreivintu.com
+      </a>
+    </nav>
+  </section>
+</main>
+
+<footer>
+  <span>© <span id="y">2026</span> Andrei Vîntu</span>
+  <span>Frankfurt am Main</span>
+</footer>
+
+<script>
+  (function(){
+    var root=document.documentElement, btns=document.querySelectorAll('.lang button');
+    function set(l){ root.lang=l; btns.forEach(function(b){ b.setAttribute('aria-pressed', b.dataset.set===l); });
+      try{ localStorage.setItem('lang', l); }catch(e){} }
+    var saved=null; try{ saved=localStorage.getItem('lang'); }catch(e){}
+    set(saved || ((navigator.language||'').toLowerCase().indexOf('de')===0 ? 'de' : 'en'));
+    btns.forEach(function(b){ b.addEventListener('click', function(){ set(b.dataset.set); }); });
+    document.getElementById('y').textContent = new Date().getFullYear();
+  })();
+</script>
+</body>
+</html>
