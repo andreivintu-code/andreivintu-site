@@ -50,10 +50,13 @@
   .links a.primary{grid-column:1/-1;background:var(--navy);border-color:var(--navy);color:var(--paper)}
   .links svg{width:20px;height:20px;flex:none}
   .links small{display:block;color:inherit;opacity:.7;font-size:12.5px}
-  .arc{white-space:nowrap}
-  .arc sup{font-size:.62em;line-height:0;vertical-align:.95em;margin-left:.02em}
-  .arc sup sup{font-size:.78em;vertical-align:.8em}
+  .arc{white-space:nowrap;font-weight:800;letter-spacing:-.02em;text-transform:lowercase}
+  .arc span{position:relative;display:inline-block}
+  .arc span:nth-child(2){top:-.28em}
+  .arc span:nth-child(3){top:-.56em}
   .links .arc{font-size:17px}
+  .links img.logo{width:20px;height:auto;flex:none;border-radius:2px}
+  @media (prefers-color-scheme: dark){ .links img.logo{outline:1px solid #555} }
   footer{padding:18px clamp(16px,5vw,56px);color:var(--muted);font-size:13px;display:flex;justify-content:space-between;
        gap:12px;flex-wrap:wrap;border-top:1px solid var(--line)}
   footer a{color:inherit}
@@ -91,23 +94,23 @@
 
     <div class="bio" data-lang="en">
       <p class="serif">I’ve always been drawn to how things are made and how they work. University and my engineering career answered much of that curiosity, and so I went further, toward a more spiritual and emotional perspective on life through art.</p>
-      <p>I approached both areas with initiatives of my own: a call for innovation with <strong>Ciinum Apparatics</strong>, and in art by starting to collect and co-initiating <strong><span class="arc" aria-label="ARC">A<sup>R<sup>C</sup></sup></span></strong>.</p>
+      <p>I approached both areas with initiatives of my own: a call for innovation with <strong>Ciinum Apparatics</strong>, and in art by starting to collect and co-initiating <strong><span class="arc" aria-label="arc"><span>a</span><span>r</span><span>c</span></span></strong>.</p>
       <p>Years of working on engineering projects taught me that good ideas and the best quality only come about when passionate people take charge and keep grinding until every expectation is exceeded.</p>
       <p>That’s why I want to build an engineering project for people with initiative and ideas of their own, from transportation to energy storage to everyday devices.</p>
-      <p>Art is the other half of me. I collect contemporary paintings and drawings, mostly figurative work by young artists, and I value the people behind the works as much as the works themselves. Out of that grew <strong><span class="arc" aria-label="ARC">A<sup>R<sup>C</sup></sup></span></strong>, a network I run that turns the one-time transaction between artist and collector into a lasting relationship.</p>
+      <p>Art is the other half of me. I collect contemporary paintings and drawings, mostly figurative work by young artists, and I value the people behind the works as much as the works themselves. Out of that grew <strong><span class="arc" aria-label="arc"><span>a</span><span>r</span><span>c</span></span></strong>, a network I run that turns the one-time transaction between artist and collector into a lasting relationship.</p>
     </div>
     <div class="bio" data-lang="de">
       <p class="serif">Mich hat schon immer interessiert, wie Dinge gemacht sind und wie sie funktionieren. Studium und Ingenieurlaufbahn haben viel von dieser Neugier beantwortet, und so bin ich weitergegangen, hin zu einem spirituelleren und emotionaleren Blick auf das Leben durch die Kunst.</p>
-      <p>Beiden Bereichen habe ich mich mit eigenen Initiativen genähert: mit <strong>Ciinum Apparatics</strong> als Aufruf zur Innovation, und in der Kunst, indem ich zu sammeln begann und <strong><span class="arc" aria-label="ARC">A<sup>R<sup>C</sup></sup></span></strong> mitinitiiert habe.</p>
+      <p>Beiden Bereichen habe ich mich mit eigenen Initiativen genähert: mit <strong>Ciinum Apparatics</strong> als Aufruf zur Innovation, und in der Kunst, indem ich zu sammeln begann und <strong><span class="arc" aria-label="arc"><span>a</span><span>r</span><span>c</span></span></strong> mitinitiiert habe.</p>
       <p>Jahre in Ingenieurprojekten haben mich gelehrt, dass gute Ideen und beste Qualität nur entstehen, wenn leidenschaftliche Menschen Verantwortung übernehmen und dranbleiben, bis alle Erwartungen übertroffen sind.</p>
       <p>Deshalb möchte ich ein Ingenieurprojekt für Menschen mit Eigeninitiative und eigenen Ideen aufbauen, von Mobilität über Energiespeicher bis zu Alltagsgeräten.</p>
-      <p>Die Kunst ist meine andere Hälfte. Ich sammle zeitgenössische Malerei und Zeichnung, vor allem figurative Arbeiten junger Künstler:innen, und schätze die Menschen hinter den Werken genauso wie die Werke selbst. Daraus ist <strong><span class="arc" aria-label="ARC">A<sup>R<sup>C</sup></sup></span></strong> entstanden, ein Netzwerk, das ich betreibe und das die einmalige Transaktion zwischen Künstler:in und Sammler:in in eine dauerhafte Beziehung verwandelt.</p>
+      <p>Die Kunst ist meine andere Hälfte. Ich sammle zeitgenössische Malerei und Zeichnung, vor allem figurative Arbeiten junger Künstler:innen, und schätze die Menschen hinter den Werken genauso wie die Werke selbst. Daraus ist <strong><span class="arc" aria-label="arc"><span>a</span><span>r</span><span>c</span></span></strong> entstanden, ein Netzwerk, das ich betreibe und das die einmalige Transaktion zwischen Künstler:in und Sammler:in in eine dauerhafte Beziehung verwandelt.</p>
     </div>
 
     <nav class="links" aria-label="Links">
       <a class="primary" href="https://arc-ism.com" target="_blank" rel="noopener">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M5 17 12 5l7 12M8.5 12.5h7"/></svg>
-        <span><span class="arc" aria-label="ARC">A<sup>R<sup>C</sup></sup></span> <small data-lang="en">Artists &amp; collectors in collaboration</small><small data-lang="de">Künstler:innen &amp; Sammler:innen im Austausch</small></span>
+        <img class="logo" src="arc-logo.png" alt="" width="20" height="21">
+        <span><span class="arc" aria-label="arc"><span>a</span><span>r</span><span>c</span></span> <small data-lang="en">Artists &amp; collectors in collaboration</small><small data-lang="de">Künstler:innen &amp; Sammler:innen im Austausch</small></span>
       </a>
       <a href="https://ciinumapparatics.com" target="_blank" rel="noopener" style="grid-column:1/-1">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg>
