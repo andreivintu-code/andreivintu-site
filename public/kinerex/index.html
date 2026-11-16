@@ -1,0 +1,974 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>KineRex App</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: one phone-width column, bottom tab bar, sheets slide up from the bottom. */
+:root {
+  --bg: #F4F5F7; --surface: #FFFFFF; --line: #D5D8DD; --soft: #E3E5E9;
+  --fg: #1F2328; --muted: #5B6168; --accent: #2F4A9E; --accent-soft: #DCE3F5; --accent-ink: #1F3474;
+  --good: #2E7D4F; --good-soft: #E3F1E8; --warn: #8A3D0C; --warn-soft: #FCEBDC;
+  --panel: #1B1E22; --panel-ink: #E8EDF5;
+  --sans: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #131518; --surface: #1C1F24; --line: #343943; --soft: #262A31;
+  --fg: #E8EAED; --muted: #A3AAB4; --accent: #8FA6E8; --accent-soft: #263255; --accent-ink: #C9D5F7;
+  --good: #6CC594; --good-soft: #1C3426; --warn: #F0A574; --warn-soft: #3A2618;
+  --panel: #0C0E10; --panel-ink: #E8EDF5; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #131518; --surface: #1C1F24; --line: #343943; --soft: #262A31;
+  --fg: #E8EAED; --muted: #A3AAB4; --accent: #8FA6E8; --accent-soft: #263255; --accent-ink: #C9D5F7;
+  --good: #6CC594; --good-soft: #1C3426; --warn: #F0A574; --warn-soft: #3A2618;
+  --panel: #0C0E10; --panel-ink: #E8EDF5; color-scheme: dark }
+
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--fg); font-family: var(--sans); font-size: 15px; }
+.app { max-width: 480px; margin: 0 auto; min-height: 100%; display: flex; flex-direction: column; }
+.main { flex: 1; display: flex; flex-direction: column; gap: 14px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 16px 96px; }
+header.top { display: flex; flex-direction: column; gap: 4px; }
+.eyebrow { margin: 0; font-size: 12px; font-weight: 800; letter-spacing: .08em; color: var(--muted); text-transform: uppercase; }
+h1 { margin: 0; font-size: 26px; font-weight: 800; text-wrap: balance; }
+h2 { margin: 0; font-size: 12px; font-weight: 800; letter-spacing: .08em; color: var(--muted); text-transform: uppercase; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.pill { font-size: 12px; font-weight: 800; padding: 4px 10px; border-radius: 999px; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.pill .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.p-good { background: var(--good-soft); color: var(--good); }
+.p-warn { background: var(--warn-soft); color: var(--warn); }
+.p-info { background: var(--accent-soft); color: var(--accent-ink); }
+.p-idle { background: var(--soft); color: var(--muted); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.note { font-size: 13px; line-height: 1.45; color: var(--muted); margin: 0; }
+.banner { background: var(--warn-soft); color: var(--warn); border-radius: 12px; padding: 12px 14px; font-size: 13px; line-height: 1.45; }
+.banner b { display: block; margin-bottom: 2px; }
+
+.machines { display: flex; flex-direction: column; gap: 10px; }
+.machine { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: flex; gap: 12px; align-items: center; text-align: left; font: inherit; color: inherit; cursor: pointer; width: 100%; }
+.machine:hover { border-color: var(--accent); }
+.thumb { width: 72px; height: 52px; border-radius: 8px; flex: none; background: var(--panel); color: var(--panel-ink); font-family: var(--mono); font-size: 13px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.thumb img { width: 100%; height: 100%; object-fit: cover; }
+.m-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
+.m-name { font-weight: 800; font-size: 16px; }
+.m-sub { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+
+.photo { position: relative; border-radius: 14px; overflow: hidden; background: var(--panel); aspect-ratio: 4 / 3; max-width: 100%; }
+.photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.photo .cap { position: absolute; inset: 0 0 auto 0; display: flex; justify-content: space-between; padding: 5px 10px; font-size: 11px; font-weight: 800; color: #F2F4F7; background: rgba(20,22,26,.6); }
+.photo .empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 20px; color: var(--panel-ink); font-size: 13px; }
+
+.btn { font: inherit; font-weight: 800; font-size: 15px; min-height: 48px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); padding: 0 16px; cursor: pointer; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+.btn.small { min-height: 36px; font-size: 13px; padding: 0 12px; }
+.btn:disabled { opacity: .5; cursor: default; }
+.btn:focus-visible, .machine:focus-visible, .tab:focus-visible, input:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.slider { display: flex; flex-direction: column; gap: 8px; }
+.slider label { font-weight: 700; display: flex; justify-content: space-between; }
+.slider output { font-family: var(--mono); font-variant-numeric: tabular-nums; color: var(--muted); }
+input[type=range] { width: 100%; accent-color: var(--accent); }
+
+.witness { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.witness figure { margin: 0; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.witness figcaption { font-size: 11px; font-weight: 800; letter-spacing: .06em; color: var(--muted); text-transform: uppercase; }
+.witness img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); }
+.verdict { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: 14px; }
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; font-family: var(--mono); font-variant-numeric: tabular-nums; text-align: right; overflow-wrap: anywhere; }
+
+.log { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.log li { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; display: flex; gap: 12px; align-items: center; }
+.log time { width: 46px; flex: none; font-family: var(--mono); font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.log .what { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; font-weight: 700; font-size: 14px; }
+.log img { width: 64px; height: 48px; object-fit: cover; border-radius: 6px; flex: none; }
+
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label { font-weight: 700; font-size: 14px; }
+.field select, .field input[type=number], .field input[type=text] { font: inherit; min-height: 44px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); padding: 0 12px; }
+.check { display: flex; align-items: center; gap: 10px; font-weight: 700; }
+.check input { width: 20px; height: 20px; accent-color: var(--accent); }
+.linkname { font: inherit; font-weight: 800; font-size: 16px; color: var(--fg); background: none; border: 0; padding: 0; cursor: pointer; text-align: left; }
+.linkname:hover { color: var(--accent); }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { font: inherit; font-size: 12px; font-weight: 800; padding: 4px 10px; border: 0; background: var(--surface); color: var(--muted); cursor: pointer; min-height: 30px; }
+.seg button.on { background: var(--accent); color: var(--surface); }
+.ctl-sub { display: flex; gap: 8px; align-items: center; font-size: 12px; color: var(--muted); }
+.kind { font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; padding: 2px 8px; border-radius: 6px; background: var(--soft); color: var(--fg); }
+.readout { font-family: var(--mono); font-size: 34px; font-weight: 600; text-align: center; font-variant-numeric: tabular-nums; }
+.btns3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.btn.big { min-height: 64px; font-size: 18px; }
+/* Machines: two annexes per row */
+.app.wide { max-width: 1120px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.grid2 .card { padding: 10px; gap: 8px; min-width: 0; }
+@media (max-width: 640px) { .grid2 { grid-template-columns: 1fr; } .grid2 .card { padding: 12px; } .grid2 .linkname { font-size: 16px; } }
+.grid2 .linkname { font-size: 14px; overflow-wrap: anywhere; }
+.grid2 .row { gap: 6px; align-items: flex-start; }
+.grid2 .ctl-sub { flex-wrap: wrap; gap: 4px 8px; font-size: 11px; overflow-wrap: anywhere; }
+.grid2 .btns, .grid2 .btns3 { gap: 6px; }
+.grid2 .btn { padding: 0 6px; font-size: 14px; min-height: 44px; }
+.grid2 .btn.big { min-height: 52px; font-size: 15px; }
+.grid2 .btns3 .btn { font-size: 13px; padding: 0 2px; }
+.grid2 .readout { font-size: 26px; }
+.grid2 .note { font-size: 12px; margin: 0; }
+.grid2 .seg button { padding: 3px 8px; min-height: 28px; }
+.grid2 .photo { border-radius: 10px; }
+/* Three annexes per row on a laptop or tablet; two on a phone */
+@media (min-width: 700px) {
+  .grid2 { grid-template-columns: repeat(3, 1fr); }
+  /* Compact panel: two rows of three fit one laptop screen */
+  .app.wide .main { gap: 8px; padding-block: 10px 72px; }
+  .app.wide h1 { font-size: 20px; }
+  .app.wide header.top { gap: 0; }
+  .grid2 .card { gap: 6px; }
+  .grid2 .photo { aspect-ratio: auto; height: 160px; }
+  /* Up to six annexes: the grid fills the screen in two equal rows and the photos take the room left */
+  .app.wide .main.fit { flex: none; min-height: 0; height: calc(100vh - 8px); box-sizing: border-box; display: grid; grid-template-rows: auto minmax(0, 1fr); }
+  .main.fit .grid2 { flex: 1; min-height: 0; grid-auto-rows: minmax(0, 1fr); }
+  .main.fit .grid2 .card { min-height: 0; overflow: hidden; }
+  .main.fit .grid2 .photo { flex: 1 1 0; height: auto; min-height: 60px; }
+  .grid2 .btn { min-height: 36px; font-size: 13px; }
+  .grid2 .btn.big { min-height: 42px; font-size: 15px; }
+  .grid2 .readout { font-size: 20px; }
+  .grid2 input[type=range] { margin: 0; }
+}
+.ctl { display: flex; flex-direction: column; gap: 6px; }
+.sync { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; color: var(--muted); cursor: pointer; }
+.sync input { width: 16px; height: 16px; accent-color: var(--accent); margin: 0; }
+.ctl.synced { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 8px; }
+.sync-note { margin: 2px 0 0; font-size: 12px; color: var(--accent); }
+.ctls-multi { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
+.ctls-multi .ctl + .ctl { border-left: 1px solid var(--line); padding-left: 8px; }
+.ctls-multi .btns { gap: 4px; }
+.ctls-multi .btn.big { font-size: 13px; padding: 0 4px; }
+.ctls-multi .note { display: none; }
+.servo-label { font-size: 12px; font-weight: 800; color: var(--fg); }
+.posrow { display: flex; flex-wrap: wrap; gap: 6px; }
+.btn.pos { min-height: 44px; padding: 0 12px; font-size: 14px; display: inline-flex; align-items: center; gap: 8px; }
+.btn.pos b { display: inline-flex; width: 22px; height: 22px; border-radius: 50%; align-items: center; justify-content: center; background: var(--accent); color: var(--surface); font-size: 12px; }
+.btn.teach { min-height: 44px; padding: 0 12px; font-size: 13px; border-style: dashed; }
+details.adv > summary { cursor: pointer; font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 4px 0; }
+details.adv[open] > summary { margin-bottom: 6px; }
+.fmodel { display: grid; grid-template-columns: minmax(0, 1fr) 128px; gap: 10px; align-items: start; }
+.fmodel figure { margin: 0; display: grid; gap: 4px; }
+.fmodel figcaption { font-size: 12px; color: var(--muted); font-weight: 700; }
+.fmodel svg { width: 100%; height: 220px; background: var(--soft); border-radius: 12px; touch-action: none; user-select: none; -webkit-user-select: none; display: block; }
+.fmodel #top { height: 128px; }
+.fmodel .roll { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.fmodel .roll .btn { padding: 8px 4px; font-size: 13px; touch-action: none; }
+.tjoint.hit .val { color: var(--accent); font-weight: 800; }
+.tjoint.hit { background: var(--accent-soft); border-radius: 8px; }
+.batt { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 800; color: var(--muted); font-family: var(--mono); }
+.batt.low { color: var(--warn); }
+.batt svg { width: 20px; height: 11px; }
+.tjoint { display: grid; grid-template-columns: 72px 44px minmax(0, 1fr) 44px 36px; gap: 8px; align-items: center; font-size: 13px; }
+.tjoint .val { font-family: var(--mono); font-variant-numeric: tabular-nums; text-align: right; }
+.tlist { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.tlist li { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 14px; }
+.sheet.wide { max-width: 560px; max-height: 88vh; overflow-y: auto; }
+.panel-head { display: flex; align-items: center; gap: 8px; }
+.panel-head .btn.small { min-height: 30px; padding: 0 10px; font-size: 12px; }
+.fields2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+code { font-family: var(--mono); font-size: 12.5px; background: var(--soft); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+
+nav.tabs { position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); border-top: 1px solid var(--line);
+  padding-bottom: env(safe-area-inset-bottom, 0px); padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); z-index: 5; }
+nav.tabs .inner { max-width: 480px; margin: 0 auto; display: grid; grid-template-columns: repeat(3, 1fr); }
+.tab { min-height: 56px; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; color: var(--muted); text-decoration: none; }
+.tab[aria-current="page"] { color: var(--accent); font-weight: 800; }
+
+.sheet-bg { position: fixed; inset: 0; background: rgba(20,22,26,.4); display: flex; align-items: flex-end; justify-content: center; z-index: 20; }
+.sheet { width: 100%; max-width: 480px; background: var(--surface); border-radius: 18px 18px 0 0; display: flex; flex-direction: column; gap: 12px;
+  padding: 22px max(20px, env(safe-area-inset-right, 0px)) calc(24px + env(safe-area-inset-bottom, 0px)) max(20px, env(safe-area-inset-left, 0px)); }
+.sheet h3 { margin: 0; font-size: 20px; font-weight: 800; }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(72px + env(safe-area-inset-bottom, 0px)); background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-weight: 700; font-size: 14px; z-index: 30; max-width: calc(100% - 32px); }
+@media (prefers-reduced-motion: no-preference) { .sheet { animation: up .18s ease-out; } @keyframes up { from { transform: translateY(24px); opacity: .6; } } }
+</style>
+
+<div class="app">
+  <main class="main" id="view"></main>
+</div>
+<nav class="tabs" aria-label="Sections"><div class="inner">
+  <a class="tab" href="#panel" data-tab="panel">Machines</a>
+  <a class="tab" href="#log" data-tab="log">Log</a>
+  <a class="tab" href="#setup" data-tab="setup">Setup</a>
+</div></nav>
+<div id="overlay"></div>
+<div id="toast" class="toast" hidden></div>
+
+<script src="https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js"></script>
+<script>
+(() => {
+  // ---------- state ----------
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem('kinerex.' + k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem('kinerex.' + k, JSON.stringify(v)); } catch (e) {} }
+  };
+  const onHttps = location.protocol === 'https:';
+  // Served by serve-app.command on the Mac: live mode, annexes found automatically.
+  const viaMac = location.protocol === 'http:';
+  // Online (any network): annexes and app meet at an MQTT broker in the cloud. The login is kept on this device only.
+  const cloudCfg = viaMac ? null : store.get('cloud', null);
+  const cloud = !!(cloudCfg && cloudCfg.host);
+  const ROOT = 'kinerex';                       // topics: kinerex/<annex>/number/servo_angle/command ...
+  const defaults = [
+    { id: 'eye', name: 'Test plate · eye', host: 'kinerex-test.local', camera: true, confirm: true },
+    { id: 'c3', name: 'Test plate · finger', host: 'kinerex-c3.local', camera: false, confirm: false }
+  ];
+  const S = {
+    devices: viaMac ? store.get('found', []) : cloud ? store.get('cloudDevices', []) : store.get('devices', defaults),
+    demo: !viaMac && !cloud,
+    net: cloud ? 'connecting' : null,           // cloud link: connecting | online | offline | denied
+    searching: false,
+    log: store.get('log', []),
+    current: store.get('current', 'eye'),
+    status: {},           // id -> {state:'online'|'offline'|'demo', wifi}
+    angle: {},            // id -> servo level -100..100
+    demoValue: 46,        // demo display value
+    witness: null,        // {before, after, action, device}
+    positions: store.get('positions', {}),   // board host -> [{name, type:'press'|'move', angles:{servoId: -100..100}}]
+    adv: {}               // board host -> Advanced section open
+  };
+  // On the Mac server, positions and annex settings are also kept on the Mac (state.json), so the phone and the Mac share them.
+  let pulled = false, pushT;
+  const pushState = () => { clearTimeout(pushT); pushT = setTimeout(() => fetch('/state', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ positions: S.positions, devices: S.devices }) }).catch(() => {}), 400); };
+  const save = () => { store.set('positions', S.positions); store.set(viaMac ? 'found' : cloud ? 'cloudDevices' : 'devices', S.devices); store.set('log', S.log.slice(0, 40)); store.set('current', S.current);
+    if (viaMac && pulled) pushState(); if (cloud && pulled) pushCloud(); };
+  async function pullState() {
+    try {
+      const st = await (await fetch('/state')).json();
+      const sp = st.positions || {};
+      for (const h of new Set([...Object.keys(sp), ...Object.keys(S.positions)])) {
+        if (sp[h] && sp[h].length) S.positions[h] = sp[h];
+      }
+      for (const sd of st.devices || []) {
+        const d = S.devices.find(x => x.id === sd.id);
+        if (!d) S.devices.push(sd);
+        else ['name', 'move', 'rest', 'press', 'step', 'confirm', 'sync', 'camera'].forEach(k => { if (sd[k] !== undefined) d[k] = sd[k]; });
+      }
+    } catch (e) {}
+    pulled = true; save();
+  }
+  // Movement settings per annex: 'press' (rest/press angles) or 'turn' (step left/right).
+  const mv = d => Object.assign({ move: 'press', rest: -20, press: 40, step: 10 }, d);
+  const busy = {};
+  const dev = id => S.devices.find(d => d.id === id) || S.devices[0];
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const now = () => new Date().toTimeString().slice(0, 5);
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+  // ---------- demo camera: draws a panel so the flow can be tried without hardware ----------
+  function demoPhoto(id) {
+    const c = document.createElement('canvas'); c.width = 640; c.height = 480;
+    const g = c.getContext('2d');
+    g.fillStyle = '#C9CDD3'; g.fillRect(0, 0, 640, 480);
+    g.fillStyle = '#B9BEC6'; g.fillRect(40, 60, 560, 360);
+    g.fillStyle = '#1B1E22'; g.fillRect(90, 110, 240, 110);
+    g.fillStyle = '#FF5A4E'; g.font = 'bold 72px monospace'; g.textAlign = 'center'; g.fillText(String(S.demoValue).padStart(2, '0'), 210, 192);
+    const lvl = (S.angle[id] || 0) / 100;
+    g.fillStyle = '#E8EAED'; g.beginPath(); g.arc(470, 165, 62, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = '#1F2328'; g.lineWidth = 8; g.beginPath(); g.moveTo(470, 165);
+    const a = -Math.PI / 2 + lvl * Math.PI * 0.75; g.lineTo(470 + Math.cos(a) * 52, 165 + Math.sin(a) * 52); g.stroke();
+    ['Start', 'Temp', 'Spin', 'Delay'].forEach((t, i) => {
+      g.fillStyle = '#F7F8FA'; g.beginPath(); g.arc(130 + i * 110, 320, 34, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#3A3F45'; g.font = 'bold 18px sans-serif'; g.fillText(t, 130 + i * 110, 378);
+    });
+    g.fillStyle = 'rgba(0,0,0,.35)'; g.font = 'bold 16px sans-serif'; g.textAlign = 'left'; g.fillText('DEMO CAMERA', 52, 448);
+    return c.toDataURL('image/jpeg', 0.8);
+  }
+
+  // ---------- online: MQTT broker (HiveMQ Cloud) ----------
+  // Each annex runs ESPHome's MQTT client with topic_prefix kinerex/<annex>. It publishes
+  // kinerex/<annex>/status (online/offline), .../number/<servo>/state and .../sensor/<x>/state,
+  // and listens on .../number/<servo>/command. Positions and annex settings for all phones sit in the
+  // retained message kinerex/app/state.
+  let mq = null;
+  const title = h => h.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()).replace(/^Kinerex\b/, 'KineRex');
+  function ensureBoard(h) {
+    if (!S.devices.some(d => d.host === h && !(d.servo > 1))) { S.devices.push({ id: h, name: title(h), host: h, camera: false, finger: true, confirm: false }); return true; }
+    return false;
+  }
+  function ensureServo(h, n) {
+    let added = ensureBoard(h);
+    if (n > 1 && !S.devices.some(d => d.id === `${h}#${n}`)) { S.devices.push({ id: `${h}#${n}`, name: `${title(h)} · servo ${n}`, host: h, servo: n, camera: false, finger: true, confirm: false }); added = true; }
+    return added;
+  }
+  let redrawT;
+  const redrawSoon = () => { clearTimeout(redrawT); redrawT = setTimeout(() => { if (!document.getElementById('overlay').innerHTML) render(); }, 250); };
+  function connectCloud() {
+    if (!window.mqtt) { S.net = 'offline'; render(); return; }
+    const url = `wss://${cloudCfg.host}:${cloudCfg.port || 8884}/mqtt`;
+    mq = window.mqtt.connect(url, { username: cloudCfg.user, password: cloudCfg.pass, clientId: 'kinerex-app-' + Math.random().toString(16).slice(2, 10), reconnectPeriod: 4000, connectTimeout: 10000, clean: true });
+    let gotState = false;
+    const startT = setTimeout(() => { if (!pulled) { pulled = true; save(); } }, 3000);   // no shared state yet: start from this device's
+    mq.on('connect', () => {
+      S.net = 'online'; render();
+      mq.subscribe([`${ROOT}/+/status`, `${ROOT}/+/number/+/state`, `${ROOT}/+/sensor/+/state`, `${ROOT}/app/state`]);
+    });
+    mq.on('reconnect', () => { if (S.net !== 'denied') { S.net = 'connecting'; redrawSoon(); } });
+    mq.on('offline', () => { if (S.net !== 'denied') { S.net = 'offline'; redrawSoon(); } });
+    mq.on('error', e => { if (/auth|Not authorized|Bad user/i.test(String(e && e.message))) { S.net = 'denied'; mq.end(true); render(); } });
+    mq.on('message', (topic, buf) => {
+      const msg = buf.toString(); const t = topic.split('/');
+      if (t[1] === 'app' && t[2] === 'state') {
+        if (gotState) return; gotState = true; clearTimeout(startT);
+        try {
+          const st = JSON.parse(msg);
+          for (const [h, l] of Object.entries(st.positions || {})) if (l && l.length) S.positions[h] = l;
+          for (const sd of st.devices || []) { const d = S.devices.find(x => x.id === sd.id); if (!d) S.devices.push(sd); else ['name', 'move', 'rest', 'press', 'step', 'confirm', 'sync'].forEach(k => { if (sd[k] !== undefined) d[k] = sd[k]; }); }
+        } catch (e) {}
+        pulled = true; save(); redrawSoon(); return;
+      }
+      const h = t[1]; let changed = false;
+      if (t[2] === 'status') {
+        changed = ensureBoard(h);
+        const on = msg === 'online';
+        S.devices.filter(d => d.host === h).forEach(d => { S.status[d.id] = Object.assign({}, S.status[d.id], { state: on ? 'online' : 'offline' }); });
+        changed = true;
+      } else if (t[2] === 'number') {
+        const m = /^servo(?:_(\d+))?_angle$/.exec(t[3]); if (!m) return;
+        const n = m[1] ? +m[1] : 1; changed = ensureServo(h, n);
+        const id = n === 1 ? h : `${h}#${n}`; const v = parseFloat(msg);
+        if (isFinite(v) && !busy[id]) S.angle[id] = v;
+      } else if (t[2] === 'sensor') {
+        const v = parseFloat(msg); if (!isFinite(v)) return;
+        const st = S.status[h] = Object.assign({ state: 'online' }, S.status[h]);
+        if (t[3] === 'battery') st.bat = v; else if (t[3] === 'wi-fi_signal') st.wifi = v; else return;
+      }
+      if (changed) save();
+      redrawSoon();
+    });
+  }
+  const pushCloud = () => { clearTimeout(pushT); pushT = setTimeout(() => { if (mq && mq.connected) mq.publish(`${ROOT}/app/state`, JSON.stringify({ positions: S.positions, devices: S.devices }), { retain: true, qos: 1 }); }, 400); };
+  function cloudPost(d, kind, objectId, action, query) {
+    if (!mq || !mq.connected) return 'offline';
+    if ((S.status[d.host] || {}).state === 'offline') return 'offline';
+    const payload = kind === 'button' ? 'PRESS' : String((/value=([^&]+)/.exec(query || '') || [])[1] ?? '');
+    mq.publish(`${ROOT}/${d.host}/${kind}/${objectId}/command`, payload, { qos: 0 });
+    return 'ok';
+  }
+
+  // ---------- talking to ESPHome (web_server REST) ----------
+  // On the Mac server every call goes through its /dev/ relay (no CORS problems).
+  const base = d => viaMac ? '/dev/' + d.host : 'http://' + d.host;
+  async function post(d, kind, objectId, name, action, query) {
+    if (S.demo) { await sleep(250); return 'demo'; }
+    if (cloud) return cloudPost(d, kind, objectId, action, query);
+    const q = query ? '?' + query : '';
+    for (const key of [objectId, encodeURIComponent(name)]) {
+      try {
+        const r = await fetch(`${base(d)}/${kind}/${key}/${action}${q}`, { method: 'POST' });
+        if (r.ok) return 'ok';
+        if (r.status !== 404) return 'error ' + r.status;
+      } catch (e) {
+        if (viaMac) return 'offline';
+        try { await fetch(`${base(d)}/${kind}/${objectId}/${action}${q}`, { method: 'POST', mode: 'no-cors' }); return 'sent'; } catch (e2) { return 'offline'; }
+      }
+    }
+    return 'not found';
+  }
+  async function ping(d) {
+    if (S.demo) { S.status[d.id] = { state: 'demo', wifi: -58, bat: d.servo > 1 ? undefined : 78 }; return; }
+    if (cloud) return;                       // the broker pushes status, Wi-Fi and battery by itself
+    try {
+      const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 3000);
+      const r = await fetch(`${base(d)}/sensor/wi-fi_signal`, { signal: ctl.signal }); clearTimeout(t);
+      if (viaMac && r.status === 502) throw new Error('unreachable');
+      let wifi = null; try { const j = await r.json(); wifi = j.value; } catch (e) {}
+      S.status[d.id] = { state: 'online', wifi };
+      // Battery charge, when the board reads it ('Battery' sensor in %).
+      if (!(d.servo > 1)) for (const k of ['battery', 'Battery']) {
+        try { const rb = await fetch(`${base(d)}/sensor/${k}`); if (rb.ok) { const jb = await rb.json(); if (typeof jb.value === 'number' && isFinite(jb.value)) S.status[d.id].bat = jb.value; break; } } catch (e) {}
+      }
+    } catch (e) {
+      if (viaMac) { S.status[d.id] = { state: 'offline', wifi: null }; return; }
+      // CORS can hide a working device; a no-cors probe at least proves it answers.
+      try { await fetch(base(d) + '/', { mode: 'no-cors' }); S.status[d.id] = { state: 'online', wifi: null }; }
+      catch (e2) { S.status[d.id] = { state: 'offline', wifi: null }; }
+    }
+  }
+  async function snapshot(d) {
+    if (S.demo) return demoPhoto(d.id);
+    if (!d.camera || cloud) return null;      // online: no camera image yet
+    const url = viaMac ? `/dev/${d.host}:8081/?t=${Date.now()}` : `http://${d.host}:8081/?t=${Date.now()}`;
+    await new Promise(res => { const i = new Image(); i.onload = i.onerror = res; i.src = url; });
+    return url;
+  }
+  // Servo 1 is 'Servo angle'; further servos on the same board are 'Servo 2 angle', 'Servo 3 angle', ...
+  const setAngle = async (d, v) => { S.angle[d.id] = v; const n = d.servo || 1;
+    return n === 1 ? post(d, 'number', 'servo_angle', 'Servo angle', 'set', 'value=' + v)
+                   : post(d, 'number', `servo_${n}_angle`, `Servo ${n} angle`, 'set', 'value=' + v); };
+  const testPress = async d => {
+    const r = await post(d, 'button', 'test_press', 'Test press', 'press');
+    if (S.demo) S.demoValue = S.demoValue > 1 ? S.demoValue - 1 : 46;
+    return r;
+  };
+
+  // ---------- UI helpers ----------
+  function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => t.hidden = true, 2200); }
+  function pill(st) {
+    if (!st) return '<span class="pill p-idle"><span class="dot"></span>Checking</span>';
+    if (st.state === 'online') return '<span class="pill p-good"><span class="dot"></span>Online</span>';
+    if (st.state === 'demo') return '<span class="pill p-info"><span class="dot"></span>Demo</span>';
+    return '<span class="pill p-warn"><span class="dot"></span>Offline</span>';
+  }
+  function batt(st) {
+    if (!st || st.bat == null) return '';
+    const p = Math.max(0, Math.min(100, Math.round(st.bat)));
+    return `<span class="batt${p < 20 ? ' low' : ''}" title="Battery ${p} %"><svg viewBox="0 0 20 11" aria-hidden="true"><rect x=".5" y=".5" width="17" height="10" rx="2" fill="none" stroke="currentColor"/><rect x="18" y="3.5" width="1.5" height="4" fill="currentColor"/><rect x="2" y="2" width="${(14 * p / 100).toFixed(1)}" height="7" rx="1" fill="currentColor"/></svg>${p} %</span>`;
+  }
+  const lastPhoto = {};
+  function modePill() {
+    if (S.demo) return '<span class="pill p-info"><span class="dot"></span>Demo</span>';
+    if (!cloud) return '<span class="pill p-good"><span class="dot"></span>Local</span>';
+    const m = { online: ['p-good', 'Online'], connecting: ['p-warn', 'Connecting…'], offline: ['p-bad', 'No connection'], denied: ['p-bad', 'Login refused'] }[S.net] || ['p-warn', '…'];
+    return `<span class="pill ${m[0]}"><span class="dot"></span>${m[1]}</span>`;
+  }
+  function addLog(entry) { S.log.unshift(Object.assign({ time: now() }, entry)); save(); }
+
+  // ---------- views ----------
+  function home() {
+    const banner = onHttps
+      ? `<div class="banner"><b>Demo only here</b>This page is opened from claude.ai, which cannot reach devices on your home network. Open the downloaded file from your Mac to control the test plate.</div>`
+      : (S.searching ? `<div class="banner"><b>Looking for annexes…</b>Checking your Wi-Fi for KineRex boards. This takes a few seconds.</div>`
+        : (viaMac && !S.devices.length ? `<div class="banner"><b>No annexes yet</b>Plug in a board, wait until it is on the Wi-Fi, then tap Search again.</div>` : ''));
+    const items = S.devices.map(d => {
+      const st = S.status[d.id];
+      const ph = lastPhoto[d.id];
+      const thumb = ph ? `<img src="${esc(ph)}" alt="">` : (d.camera ? 'EYE' : 'FINGER');
+      return `<button class="machine" data-open="${esc(d.id)}">
+        <span class="thumb" aria-hidden="true">${thumb}</span>
+        <span class="m-text"><span class="m-name">${esc(d.name)}</span>
+        <span class="m-sub">${esc(d.host)}${st && st.wifi != null ? ' · Wi-Fi ' + Math.round(st.wifi) + ' dBm' : ''}</span>
+        ${pill(st)}</span></button>`;
+    }).join('');
+    return `<header class="top"><div class="row"><p class="eyebrow">KineRex · ${S.devices.length} annexes</p>${modePill()}</div><h1>Machines</h1></header>
+      ${banner}
+      <section class="machines" aria-label="Annexes">${items}</section>
+      <p class="note">Tap an annex to see its photo, move its finger and run a press with before-and-after proof.</p>
+      ${viaMac ? `<button class="btn small" id="search" ${S.searching ? 'disabled' : ''}>${S.searching ? 'Searching…' : 'Search again'}</button>` : ''}`;
+  }
+
+  function panel() {
+    // Controls for one servo: Press/Turn switch, then its buttons.
+    const ctl = (d0, label) => {
+      const d = mv(d0); const a = S.angle[d.id] ?? (d.move === 'press' ? d.rest : 0);
+      const seg = `<div class="ctl-sub">${label ? `<b class="servo-label">${esc(label)}</b>` : ''}<span class="seg" role="group" aria-label="Movement of ${esc(d.name)}">
+          <button class="${d.move !== 'turn' ? 'on' : ''}" data-mode="press" data-id="${esc(d.id)}" aria-pressed="${d.move !== 'turn'}">Press</button>
+          <button class="${d.move === 'turn' ? 'on' : ''}" data-mode="turn" data-id="${esc(d.id)}" aria-pressed="${d.move === 'turn'}">Turn</button></span>
+          <label class="sync" title="Move together with every other servo that has Sync ticked"><input type="checkbox" data-sync="${esc(d.id)}" ${d.sync ? 'checked' : ''}> Sync</label>${label ? '' : `<span>${esc(d.host)}</span>`}</div>`;
+      const body = d.move === 'turn'
+        ? `<div class="readout" aria-live="polite">${a}</div>
+           <div class="btns3"><button class="btn" data-step="-1" data-id="${esc(d.id)}" aria-label="Turn left">◀ ${d.step}</button>
+           <button class="btn" data-center="${esc(d.id)}">Center</button>
+           <button class="btn" data-step="1" data-id="${esc(d.id)}" aria-label="Turn right">${d.step} ▶</button></div>
+           <input type="range" min="-100" max="100" step="1" value="${a}" data-turn="${esc(d.id)}" aria-label="Angle of ${esc(d.name)}">
+           <button class="btn" data-sweep="${esc(d.id)}" ${busy[d.id] ? 'disabled' : ''}>${busy[d.id] ? 'Turning…' : 'Full turn'}</button>`
+        : `<div class="btns"><button class="btn big" data-rest="${esc(d.id)}" ${busy[d.id] ? 'disabled' : ''}>Rest</button>
+           <button class="btn big primary" data-press="${esc(d.id)}" ${busy[d.id] ? 'disabled' : ''}>${busy[d.id] ? 'Pressing…' : 'Press'}</button></div>
+           <p class="note">Rest ${d.rest} · Press ${d.press}</p>`;
+      return `<div class="ctl${d.sync ? ' synced' : ''}" data-ctl="${esc(d.id)}">${seg}${body}</div>`;
+    };
+    // One card per board; a board's extra servos sit inside its card.
+    const boards = S.devices.filter(d => !(d.servo > 1));
+    const cards = boards.map(d => {
+      const st = S.status[d.id];
+      const extras = S.devices.filter(x => x.host === d.host && x.servo > 1).sort((a, b) => a.servo - b.servo);
+      const head = `<div class="row"><button class="linkname" data-open="${esc(d.id)}" aria-label="Details for ${esc(d.name)}">${esc(d.name)} ›</button><span class="panel-head">${batt(st)}${pill(st)}</span></div>`;
+      const ph = lastPhoto[d.host];
+      const eye = d.camera
+        ? `<section class="photo" aria-label="Photo from the eye of ${esc(d.name)}">${ph ? `<img src="${esc(ph)}" alt="Latest photo from ${esc(d.name)}">` : '<div class="empty">No photo yet. Tap Take photo.</div>'}
+           <div class="cap"><span>EYE · SNAPSHOT</span><span>${esc(lastPhoto[d.host + '_t'] || '')}</span></div></section>
+           <div class="btns"><button class="btn small" data-snap="${esc(d.id)}">Take photo</button>${!S.demo ? `<a class="btn small" style="display:flex;align-items:center;justify-content:center;text-decoration:none" href="http://${esc(d.host)}:8080" target="_blank" rel="noopener">Live view</a>` : '<span></span>'}</div>`
+        : '';
+      const ctls = extras.length
+        ? `<div class="ctls-multi">${ctl(d, 'Servo 1') + extras.map(x => ctl(x, 'Servo ' + x.servo)).join('')}</div>`
+        : ctl(d);
+      // taught positions as the main controls; the servo controls move into Advanced
+      const list = S.positions[d.host] || [];
+      const posRow = `<div class="posrow">${list.map((p, i) => `<button class="btn pos${busy['pos' + d.host] === i ? ' primary' : ''}" data-run="${esc(d.host)}" data-i="${i}" ${busy['pos' + d.host] !== undefined ? 'disabled' : ''}><b>${i + 1}</b>${esc(p.name)}</button>`).join('')}
+        ${extras.length >= 2 ? `<button class="btn pos" data-teach="${esc(d.id)}">Move finger</button>` : ''}<button class="btn teach" data-teach="${esc(d.id)}">${list.length ? 'Teach' : 'Teach first position'}</button></div>`;
+      const open = S.adv[d.host] ?? !list.length;
+      return `<section class="card" aria-label="${esc(d.name)}">${head}${extras.length ? `<div class="ctl-sub"><span>${esc(d.host)}</span></div>` : ''}${eye}${posRow}
+        <details class="adv" data-adv="${esc(d.host)}" ${open ? 'open' : ''}><summary>Advanced: servo controls</summary>${ctls}</details></section>`;
+    }).join('');
+    return `<header class="top"><div class="row"><p class="eyebrow">KineRex · ${boards.length} annexes</p><span class="panel-head">${viaMac ? `<button class="btn small" id="search" ${S.searching ? 'disabled' : ''}>${S.searching ? 'Searching…' : 'Search again'}</button>` : ''}${modePill()}</span></div><h1>Machines</h1>${S.devices.filter(x => x.sync).length > 1 ? `<p class="note sync-note">Sync on: ${S.devices.filter(x => x.sync).length} servos move together.</p>` : ''}</header>
+      ${cards ? `<div class="grid2">${cards}</div>` : '<p class="note">No annexes yet. Tap Search again.</p>'}`;
+  }
+
+  function annex() {
+    const d = dev(S.current); const st = S.status[d.id]; const v = S.angle[d.id] || 0;
+    const ph = lastPhoto[d.id];
+    const photo = d.camera || S.demo
+      ? `<section class="photo" aria-label="Photo from the eye">${ph ? `<img src="${esc(ph)}" alt="Latest photo from the eye">` : '<div class="empty">No photo yet. Tap Take photo.</div>'}
+         <div class="cap"><span>EYE · SNAPSHOT</span><span id="snapTime">${esc(lastPhoto[d.id + '_t'] || '')}</span></div></section>
+         <div class="btns"><button class="btn small" id="snap">Take photo</button>${!S.demo ? `<a class="btn small" style="display:flex;align-items:center;justify-content:center;text-decoration:none" href="http://${esc(d.host)}:8080" target="_blank" rel="noopener">Live view for aiming</a>` : '<span></span>'}</div>`
+      : `<div class="card"><p class="note">This annex has no eye. Pair it with the test plate eye for photo proof.</p></div>`;
+    return `<header class="top"><p class="eyebrow">${esc(d.host)}</p><div class="row"><h1>${esc(d.name)}</h1><span class="panel-head">${batt(st)}${pill(st)}</span></div></header>
+      ${photo}
+      <section class="card" aria-label="Finger">
+        <h2>Finger</h2>
+        <div class="slider"><label for="angle">Servo position <output id="angleOut">${v}</output></label>
+        <input type="range" id="angle" min="-100" max="100" step="1" value="${v}"></div>
+        <div class="btns"><button class="btn" id="press">Test press</button><button class="btn primary" id="proof">Press with proof</button></div>
+        <p class="note">Press with proof takes a photo, presses, waits a moment and takes a second photo, so you can judge the result.</p>
+      </section>
+      ${S.witness && S.witness.device === d.id ? witnessCard() : ''}
+      <section class="card" aria-label="Status"><h2>Status</h2>
+        <dl class="kv"><dt>Connection</dt><dd>${st ? esc(st.state) : 'checking'}</dd><dt>Wi-Fi signal</dt><dd>${st && st.wifi != null ? Math.round(st.wifi) + ' dBm' : '–'}</dd><dt>Safety class of the press</dt><dd>${d.confirm ? 'confirm first' : 'safe'}</dd></dl>
+        <button class="btn small" id="recheck">Check connection</button>
+      </section>`;
+  }
+
+  function witnessCard() {
+    const w = S.witness;
+    return `<section class="card" aria-label="Witness">
+      <h2>Witness · ${esc(w.action)}</h2>
+      <div class="witness">
+        <figure><figcaption>Before · ${esc(w.t0)}</figcaption>${w.before ? `<img src="${esc(w.before)}" alt="Panel before the press">` : '<div class="note">no eye</div>'}</figure>
+        <figure><figcaption>After · ${esc(w.t1 || '…')}</figcaption>${w.after ? `<img src="${esc(w.after)}" alt="Panel after the press">` : '<div class="note">waiting</div>'}</figure>
+      </div>
+      ${w.after && !w.verdict ? `<p class="note">Did the panel change as expected?</p><div class="verdict"><button class="btn" data-verdict="Mismatch">Mismatch</button><button class="btn primary" data-verdict="Done">Done</button></div>` : ''}
+      ${w.verdict ? `<span class="pill ${w.verdict === 'Done' ? 'p-good' : 'p-warn'}"><span class="dot"></span>${esc(w.verdict)} · logged</span>` : ''}
+    </section>`;
+  }
+
+  function log() {
+    const items = S.log.length ? S.log.map(e => `<li><time>${esc(e.time)}</time><span class="what">${esc(e.what)}
+      <span class="pill ${e.result === 'Done' || e.result === 'ok' || e.result === 'demo' ? 'p-good' : e.result === 'Mismatch' ? 'p-warn' : 'p-idle'}" style="align-self:flex-start"><span class="dot"></span>${esc(e.result)}</span></span>
+      ${e.photo ? `<img src="${esc(e.photo)}" alt="Photo after: ${esc(e.what)}">` : ''}</li>`).join('')
+      : '<li><span class="what">Nothing yet. Run a test press from an annex.</span></li>';
+    return `<header class="top"><p class="eyebrow">This phone</p><h1>Log</h1></header>
+      <ol class="log">${items}</ol>
+      ${S.log.length ? '<button class="btn small" id="clearLog">Clear log</button>' : ''}
+      <p class="note">The log lives on this phone only. In stage 2 the annex keeps it and sends it through the cloud.</p>`;
+  }
+
+  function setup() {
+    const rows = S.devices.map((d, i) => `<div class="card">
+      <div class="field"><label for="name${i}">Name</label><input type="text" id="name${i}" data-i="${i}" data-k="name" value="${esc(d.name)}"></div>
+      <div class="field"><label for="host${i}">Address</label><input type="text" id="host${i}" data-i="${i}" data-k="host" value="${esc(d.host)}" inputmode="url" autocapitalize="off" spellcheck="false"></div>
+      <label class="check"><input type="checkbox" id="cam${i}" data-i="${i}" data-k="camera" ${d.camera ? 'checked' : ''}> Has an eye (camera)</label>
+      <label class="check"><input type="checkbox" id="conf${i}" data-i="${i}" data-k="confirm" ${d.confirm ? 'checked' : ''}> Ask before pressing</label>
+      <div class="field"><label for="move${i}">Movement</label><select id="move${i}" data-i="${i}" data-k="move">
+        <option value="press" ${mv(d).move === 'press' ? 'selected' : ''}>Press: Rest and Press buttons</option>
+        <option value="turn" ${mv(d).move === 'turn' ? 'selected' : ''}>Turn: step left and right</option></select></div>
+      ${mv(d).move === 'turn'
+        ? `<div class="field"><label for="step${i}">Step per tap (1–50)</label><input type="number" id="step${i}" data-i="${i}" data-k="step" min="1" max="50" value="${mv(d).step}"></div>`
+        : `<div class="fields2"><div class="field"><label for="rest${i}">Rest angle</label><input type="number" id="rest${i}" data-i="${i}" data-k="rest" min="-100" max="100" value="${mv(d).rest}"></div>
+           <div class="field"><label for="pr${i}">Press angle</label><input type="number" id="pr${i}" data-i="${i}" data-k="press" min="-100" max="100" value="${mv(d).press}"></div></div>`}
+      ${viaMac ? `<button class="btn small" data-forget="${i}">Remove from the list</button>` : ''}
+    </div>`).join('');
+    if (viaMac) return `<header class="top"><p class="eyebrow">Your Wi-Fi</p><h1>Setup</h1></header>
+      <section class="card"><p class="note" style="margin:0">Annexes are found automatically when the app opens. Rename them here so you know which machine each one sits on.</p>
+      <div class="btns"><button class="btn small" id="search" ${S.searching ? 'disabled' : ''}>${S.searching ? 'Searching…' : 'Search again'}</button><span></span></div></section>
+      <h2>Annexes</h2>${rows || '<p class="note">None found yet.</p>'}
+      <section class="card"><div class="field"><label for="addHost">Add one by address</label><input type="text" id="addHost" placeholder="192.168.0.219" inputmode="url" autocapitalize="off" spellcheck="false"></div>
+      <button class="btn small" id="add">Add</button></section>`;
+    const cloudCard = `<section class="card"><h2 style="margin:0">Online access</h2>
+      ${cloud ? `<p class="note" style="margin:0">Connected to <b>${esc(cloudCfg.host)}</b> as <b>${esc(cloudCfg.user)}</b>. Annexes that are online appear by themselves.</p>
+        <div class="btns"><button class="btn small" id="cloudOut">Sign out</button><span></span></div>`
+      : `<p class="note" style="margin:0">Sign in to the KineRex cloud to control your annexes from anywhere. The login stays on this device.</p>
+        <div class="field"><label for="cHost">Broker address</label><input type="text" id="cHost" placeholder="xxxx.s1.eu.hivemq.cloud" inputmode="url" autocapitalize="off" spellcheck="false"></div>
+        <div class="field"><label for="cUser">User</label><input type="text" id="cUser" autocapitalize="off" spellcheck="false" autocomplete="username"></div>
+        <div class="field"><label for="cPass">Password</label><input type="password" id="cPass" autocomplete="current-password"></div>
+        <button class="btn small" id="cloudIn">Sign in</button>`}</section>`;
+    if (cloud) return `<header class="top"><p class="eyebrow">Online</p><h1>Setup</h1></header>${cloudCard}
+      <h2>Annexes</h2>${rows.replace(/data-k="host"/g, 'data-k="host" readonly') || '<p class="note">None online yet. Switch an annex on; it appears here when it connects.</p>'}`;
+    return `<header class="top"><p class="eyebrow">Local first</p><h1>Setup</h1></header>${cloudCard}
+      <section class="card"><label class="check"><input type="checkbox" id="demo" ${S.demo ? 'checked' : ''} ${onHttps ? 'disabled' : ''}> Demo mode (no hardware)</label>
+      <p class="note">${onHttps ? 'Live mode needs the page opened from your Mac on the same Wi-Fi.' : 'Turn off to talk to the annexes on your Wi-Fi.'}</p></section>
+      <h2>Annexes</h2>${rows}
+      <p class="note">On Android phones <code>.local</code> names often don't resolve. Use the annex's IP address instead, shown in the ESPHome dashboard, for example <code>192.168.1.42</code>.</p>
+      <button class="btn small" id="reset">Reset to the two test plate annexes</button>`;
+  }
+
+  // ---------- confirm sheet (built into the page) ----------
+  // ---------- teach-in ----------
+  // With angle sensors on the joints the arm is moved by hand and the angles are read live.
+  // Until then the same screen positions the servos with arrows and sliders.
+  function teachSheet(board) {
+    const o = document.getElementById('overlay');
+    const servos = [board].concat(S.devices.filter(x => x.host === board.host && x.servo > 1).sort((a, b) => a.servo - b.servo));
+    const list = S.positions[board.host] = S.positions[board.host] || [];
+    let timer = {};
+    // ---- finger model: side view (J2 base, J3 elbow) and top view (J1 turret); Servo 1-4 = J1-J4 ----
+    const model = servos.length >= 3;
+    const JN = ['J1 turret', 'J2 base', 'J3 elbow', 'J4 roll', 'Servo 5', 'Servo 6'];
+    const L1 = 75, L2 = 45, PX = 92, DEG = 0.9;            // mm; 1 slider step = 0.9 degrees
+    const ang = x => S.angle[x.id] ?? 0;
+    const clamp = v => Math.max(-100, Math.min(100, Math.round(v)));
+    const r2d = r => r * 180 / Math.PI, d2r = g => g * Math.PI / 180;
+    const fk = () => {                                     // forward: slider values -> points (y up)
+      const t2 = d2r(90 - DEG * ang(servos[1])), phi = d2r(DEG * ang(servos[2]));
+      const e = [L1 * Math.cos(t2), L1 * Math.sin(t2)], a2 = t2 - phi;
+      return { e, t: [e[0] + L2 * Math.cos(a2), e[1] + L2 * Math.sin(a2)] };
+    };
+    const ik = (x, y) => {                                 // inverse: fingertip -> J2, J3 values
+      const d = Math.max(Math.abs(L1 - L2) + 1, Math.min(L1 + L2 - 0.5, Math.hypot(x, y)));
+      const phi = Math.acos(Math.max(-1, Math.min(1, (d * d - L1 * L1 - L2 * L2) / (2 * L1 * L2))));
+      const t2 = Math.atan2(y, x) + Math.atan2(L2 * Math.sin(phi), L1 + L2 * Math.cos(phi));
+      return [clamp((90 - r2d(t2)) / DEG), clamp(r2d(phi) / DEG)];
+    };
+    const pend = {};
+    const sendSoon = x => { if (pend[x.id]) return; pend[x.id] = setTimeout(() => { delete pend[x.id]; setAngle(x, ang(x)); }, 200); };
+    const flash = {};
+    const setJ = (k, v) => { const x = servos[k]; if (!x) return; v = clamp(v); if (v === ang(x)) return; S.angle[x.id] = v; sendSoon(x);
+      const row = o.querySelector(`.tjoint[data-j="${CSS.escape(x.id)}"]`);
+      if (row) { row.querySelector('input').value = v; row.querySelector('.val').textContent = v; row.classList.add('hit'); clearTimeout(flash[k]); flash[k] = setTimeout(() => row.classList.remove('hit'), 500); } };
+    const P = (x, y) => `${x.toFixed(1)},${(-y).toFixed(1)}`;
+    function modelHtml() {
+      return `<div class="fmodel">
+        <figure><svg id="side" viewBox="-40 -128 150 160" role="img" aria-label="Side view of the finger. Drag the fingertip.">
+          <circle cx="0" cy="0" r="${L1 + L2}" fill="none" stroke="var(--line)" stroke-dasharray="3 4"/>
+          <rect x="${PX}" y="-90" width="16" height="135" fill="#E9D56A" opacity=".55"/>
+          ${[-30, 0, 30, 60].map(h => `<rect x="${PX - 3}" y="${-h - 5}" width="6" height="10" rx="2" fill="var(--muted)"/>`).join('')}
+          <rect x="-20" y="0" width="40" height="28" rx="5" fill="var(--panel)"/>
+          <text x="0" y="18" text-anchor="middle" font-size="8" fill="var(--panel-ink)" font-weight="700">turret</text>
+          <line id="l1" stroke="var(--accent)" stroke-width="9" stroke-linecap="round"/>
+          <line id="l2" stroke="var(--accent)" stroke-width="7" stroke-linecap="round"/>
+          <circle cx="0" cy="0" r="6" fill="var(--surface)" stroke="var(--fg)" stroke-width="2"/>
+          <circle id="je" r="5" fill="var(--surface)" stroke="var(--fg)" stroke-width="2"/>
+          <text x="-9" y="-9" text-anchor="end" font-size="8" fill="var(--muted)" font-weight="700">J2</text>
+          <text id="te" font-size="8" fill="var(--muted)" font-weight="700">J3</text>
+          <circle id="tip" r="7" fill="#E07A5F" stroke="var(--fg)" stroke-width="1.5"/>
+          <circle id="tiphit" r="18" fill="transparent" style="cursor:grab"/>
+        </svg><figcaption>Side view · drag the tip</figcaption></figure>
+        <figure><svg id="top" viewBox="-60 -60 120 120" role="img" aria-label="Top view of the turret. Drag the finger end left or right.">
+          <rect x="-60" y="-60" width="120" height="10" fill="#E9D56A" opacity=".55"/>
+          <circle r="22" fill="var(--panel)"/>
+          <line id="tl" stroke="var(--accent)" stroke-width="9" stroke-linecap="round"/>
+          <circle id="th1" r="7" fill="#E07A5F" stroke="var(--fg)" stroke-width="1.5"/>
+          <circle id="thhit" r="18" fill="transparent" style="cursor:grab"/>
+          <text x="0" y="40" text-anchor="middle" font-size="9" fill="var(--muted)" font-weight="700">J1</text>
+        </svg><figcaption>Top view · turret</figcaption>
+        ${servos[3] ? `<div class="roll"><button class="btn" data-roll="-1" aria-label="Roll fingertip left, hold">⟲ hold</button><button class="btn" data-roll="1" aria-label="Roll fingertip right, hold">hold ⟳</button></div><figcaption>J4 roll</figcaption>` : ''}</figure></div>`;
+    }
+    function drawModel() {
+      if (!model) return;
+      const side = o.querySelector('#side'), top = o.querySelector('#top'); if (!side) return;
+      const { e, t } = fk();
+      const set = (el, a) => Object.entries(a).forEach(([k, v]) => el.setAttribute(k, v));
+      set(side.querySelector('#l1'), { x1: 0, y1: 0, x2: e[0], y2: -e[1] });
+      set(side.querySelector('#l2'), { x1: e[0], y1: -e[1], x2: t[0], y2: -t[1] });
+      set(side.querySelector('#je'), { cx: e[0], cy: -e[1] });
+      set(side.querySelector('#te'), { x: e[0] + 8, y: -e[1] - 6 });
+      ['#tip', '#tiphit'].forEach(q => set(side.querySelector(q), { cx: t[0], cy: -t[1] }));
+      const psi = d2r(DEG * ang(servos[0])), R = 46;   // 0 = toward the panel (up in the top view)
+      const ex = R * Math.sin(psi), ey = -R * Math.cos(psi);
+      set(top.querySelector('#tl'), { x1: 0, y1: 0, x2: ex, y2: ey });
+      ['#th1', '#thhit'].forEach(q => set(top.querySelector(q), { cx: ex, cy: ey }));
+    }
+    function wireModel() {
+      if (!model) return;
+      const pt = (svg, ev) => { const p = svg.createSVGPoint(); p.x = ev.clientX; p.y = ev.clientY; return p.matrixTransform(svg.getScreenCTM().inverse()); };
+      const drag = (svg, handle, onMove) => {
+        let on = false;
+        handle.addEventListener('pointerdown', ev => { on = true; handle.setPointerCapture(ev.pointerId); ev.preventDefault(); });
+        handle.addEventListener('pointermove', ev => { if (!on) return; onMove(pt(svg, ev)); drawModel(); });
+        const stop = () => { if (!on) return; on = false; servos.forEach(x => { clearTimeout(pend[x.id]); delete pend[x.id]; }); servos.slice(0, 3).forEach(x => setAngle(x, ang(x))); };
+        handle.addEventListener('pointerup', stop); handle.addEventListener('pointercancel', stop);
+      };
+      const side = o.querySelector('#side'), top = o.querySelector('#top');
+      drag(side, side.querySelector('#tiphit'), p => { const [v2, v3] = ik(p.x, -p.y); setJ(1, v2); setJ(2, v3); });
+      drag(top, top.querySelector('#thhit'), p => setJ(0, r2d(Math.atan2(p.x, -p.y)) / DEG));
+      o.querySelectorAll('[data-roll]').forEach(b => {
+        const x = servos[3];
+        const go = v => { S.angle[x.id] = v; setAngle(x, v); const row = o.querySelector(`.tjoint[data-j="${CSS.escape(x.id)}"]`);
+          if (row) { row.querySelector('input').value = v; row.querySelector('.val').textContent = v; row.classList.toggle('hit', v !== 0); } };
+        b.addEventListener('pointerdown', ev => { ev.preventDefault(); b.setPointerCapture(ev.pointerId); go(50 * +b.dataset.roll); });
+        const stop = () => { if (ang(x) !== 0) go(0); };
+        b.addEventListener('pointerup', stop); b.addEventListener('pointercancel', stop); b.addEventListener('lostpointercapture', stop);
+      });
+      drawModel();
+    }
+    const draw = () => {
+      const n = list.length + 1;
+      o.innerHTML = `<div class="sheet-bg" id="sbg"><div class="sheet wide" role="dialog" aria-modal="true" aria-labelledby="th">
+        <div class="row"><h3 id="th">Teach ${esc(board.name)}</h3><span class="pill p-info"><span class="dot"></span>Teach mode</span></div>
+        <p class="note">${model ? 'Drag the fingertip in the side view, and the finger end in the top view to turn the turret. Each servo follows; the rows below show which one moved.' : 'Put the fingertip on the button you want, then save it. With angle sensors on the joints you move the finger by hand; until then, use the arrows and sliders.'}</p>
+        ${model ? modelHtml() : ''}
+        ${servos.map((x, k) => { const a = Math.round(S.angle[x.id] ?? 0); return `<div class="tjoint" data-j="${esc(x.id)}">
+          <span>${model ? JN[k] : servos.length > 1 ? 'Servo ' + (k + 1) : 'Servo'}</span>
+          <button class="btn small" data-jog="-5" aria-label="Minus 5">◀</button>
+          <input type="range" min="-100" max="100" step="1" value="${a}" aria-label="Angle of servo ${k + 1}">
+          <button class="btn small" data-jog="5" aria-label="Plus 5">▶</button>
+          <span class="val">${a}</span></div>`; }).join('')}
+        <div class="field"><label for="tname">Name of position ${n}</label><input type="text" id="tname" placeholder="e.g. Boiler on" maxlength="24"></div>
+        <div class="field"><label for="ttype">What it does</label><select id="ttype">
+          <option value="move">Stay: go there and stay</option>
+          <option value="press">Press: go there, press, come back</option></select></div>
+        <button class="btn primary" id="tsave">Save as position ${n}</button>
+        ${list.length ? `<h3 style="font-size:15px">Saved positions</h3><ul class="tlist">${list.map((p, i) => `<li><span><b>${i + 1}</b> · ${esc(p.name)} <span class="note">(${p.type === 'move' ? 'stay' : 'press'})</span></span><button class="btn small" data-del="${i}">Delete</button></li>`).join('')}</ul>` : ''}
+        <div class="btns"><span></span><button class="btn" id="tdone">Done</button></div></div></div>`;
+      o.querySelectorAll('.tjoint').forEach(row => {
+        const x = servos.find(s2 => s2.id === row.dataset.j); const rg = row.querySelector('input'), val = row.querySelector('.val');
+        const go = (a) => { a = Math.max(-100, Math.min(100, Math.round(a))); S.angle[x.id] = a; rg.value = a; val.textContent = a;
+          clearTimeout(timer[x.id]); timer[x.id] = setTimeout(() => setAngle(x, a), 150); drawModel(); };
+        rg.oninput = () => go(+rg.value);
+        row.querySelectorAll('[data-jog]').forEach(b => b.onclick = () => go((S.angle[x.id] ?? 0) + (+b.dataset.jog)));
+      });
+      wireModel();
+      o.querySelector('#tsave').onclick = () => {
+        const name = o.querySelector('#tname').value.trim() || ('Position ' + n);
+        const angles = {}; servos.filter(x => !isRoll(x)).forEach(x => angles[x.id] = Math.round(S.angle[x.id] ?? 0));
+        list.push({ name, type: o.querySelector('#ttype').value, angles });
+        save(); toast('Saved as position ' + n); draw();
+      };
+      o.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { list.splice(+b.dataset.del, 1); save(); draw(); });
+      const close = () => { o.innerHTML = ''; render(); };
+      o.querySelector('#tdone').onclick = close;
+      o.querySelector('#sbg').onclick = e => { if (e.target.id === 'sbg') close(); };
+      if (!model) o.querySelector('#tname').focus();
+    };
+    draw();
+  }
+  // On a finger annex (4 servos) servo 4 is the fingertip roll: it turns endlessly, so positions leave it alone.
+  const isRoll = x => x.servo === 4 && S.devices.some(d => d.host === x.host && d.servo === 3);
+  // run a taught position: every servo of the board goes to its stored angle together
+  async function runPosition(host, i, shoot) {
+    const p = (S.positions[host] || [])[i]; if (!p) return;
+    const servos = S.devices.filter(x => x.host === host && p.angles[x.id] !== undefined && !isRoll(x));
+    const before = {}; servos.forEach(x => before[x.id] = S.angle[x.id] ?? mv(x).rest);
+    busy['pos' + host] = i; render();
+    const goAll = async (pose) => (await Promise.all(servos.map(x => { S.angle[x.id] = pose[x.id]; return setAngle(x, pose[x.id]); })))[0];
+    let r = await goAll(p.angles);
+    if (p.type !== 'move' && (r === 'ok' || r === 'demo' || r === 'sent')) { await sleep(900); r = await goAll(before); }
+    delete busy['pos' + host];
+    addLog({ what: (servos[0] ? servos[0].name : host) + ': ' + (i + 1) + ' ' + p.name, result: r });
+    render();
+    if (shoot) { await sleep(300); shoot(servos[0]); }
+  }
+
+  function confirmSheet(d, onYes) {
+    const o = document.getElementById('overlay');
+    o.innerHTML = `<div class="sheet-bg" id="sbg"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sh">
+      <div class="row"><h3 id="sh">Press on ${esc(d.name)}?</h3><span class="pill p-warn">Confirm first</span></div>
+      <p class="note">The finger will press once. The eye takes a photo before and after so you can check the result.</p>
+      <div class="btns"><button class="btn" id="no">Cancel</button><button class="btn primary" id="yes">Press</button></div></div></div>`;
+    const close = () => o.innerHTML = '';
+    o.querySelector('#no').onclick = close;
+    o.querySelector('#sbg').onclick = e => { if (e.target.id === 'sbg') close(); };
+    o.querySelector('#yes').onclick = () => { close(); onYes(); };
+    o.querySelector('#yes').focus();
+  }
+
+  // ---------- flows ----------
+  async function takePhoto(d) {
+    const p = await snapshot(d);
+    if (p) { lastPhoto[d.id] = p; lastPhoto[d.id + '_t'] = now(); }
+    render();
+  }
+  async function proof(d) {
+    S.witness = { device: d.id, action: 'Test press', t0: now(), before: await snapshot(d) };
+    render();
+    const r = await testPress(d);
+    await sleep(S.demo ? 600 : 1500);
+    S.witness.after = await snapshot(d); S.witness.t1 = now(); S.witness.sent = r;
+    if (S.witness.after) { lastPhoto[d.id] = S.witness.after; lastPhoto[d.id + '_t'] = S.witness.t1; }
+    if (!S.witness.after) { S.witness.verdict = r === 'ok' || r === 'sent' || r === 'demo' ? 'Done' : 'Mismatch'; addLog({ what: d.name + ': test press', result: r }); }
+    render();
+  }
+
+  // ---------- render + wiring ----------
+  function route() { const h = (location.hash || '#panel').slice(1); return ['panel', 'home', 'annex', 'log', 'setup'].includes(h) ? h : 'panel'; }
+  function render() {
+    const r = route(); const v = document.getElementById('view');
+    v.innerHTML = { panel, home, annex, log, setup }[r]();
+    document.querySelector('.app').classList.toggle('wide', r === 'panel');
+    v.classList.toggle('fit', r === 'panel' && v.querySelectorAll('.grid2 > .card').length <= 6);
+    document.querySelectorAll('.tab').forEach(t => { if (t.dataset.tab === (r === 'annex' || r === 'home' ? 'panel' : r)) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current'); });
+    wire(r);
+  }
+  function wire(r) {
+    const v = document.getElementById('view');
+    v.querySelectorAll('[data-open]').forEach(b => b.onclick = () => { S.current = b.dataset.open; save(); location.hash = 'annex'; });
+    if (r === 'annex') {
+      const d = dev(S.current);
+      const a = v.querySelector('#angle'), out = v.querySelector('#angleOut');
+      let tmr; a.oninput = () => { out.textContent = a.value; clearTimeout(tmr); tmr = setTimeout(async () => { const res = await setAngle(d, +a.value); if (S.demo && d.camera) takePhoto(d); if (res === 'offline') toast('Annex not reachable'); }, 180); };
+      v.querySelector('#press').onclick = async () => { const res = await testPress(d); addLog({ what: d.name + ': test press', result: res }); toast(res === 'offline' ? 'Annex not reachable' : 'Pressed'); if (S.demo && d.camera) takePhoto(d); };
+      v.querySelector('#proof').onclick = () => d.confirm ? confirmSheet(d, () => proof(d)) : proof(d);
+      const s = v.querySelector('#snap'); if (s) s.onclick = () => takePhoto(d);
+      v.querySelector('#recheck').onclick = async () => { S.status[d.id] = null; render(); await ping(d); render(); };
+      v.querySelectorAll('[data-verdict]').forEach(b => b.onclick = () => {
+        S.witness.verdict = b.dataset.verdict;
+        addLog({ what: d.name + ': test press', result: b.dataset.verdict, photo: S.witness.after && S.witness.after.startsWith('data:') ? S.witness.after : S.witness.after });
+        render(); toast('Logged');
+      });
+    }
+    if (r === 'log') { const c = v.querySelector('#clearLog'); if (c) c.onclick = () => { S.log = []; save(); render(); toast('Log cleared'); }; }
+    const sb = v.querySelector('#search'); if (sb) sb.onclick = discover;
+    if (r === 'panel') {
+      const res = x => { if (x === 'offline') toast('Annex not reachable'); else if (x !== 'ok' && x !== 'demo' && x !== 'sent') toast('Annex answered: ' + x); };
+      const goTo = async (d, a) => { S.angle[d.id] = a; render(); const x = await setAngle(d, a); res(x); return x; };
+      const doPress = async d => {
+        busy[d.id] = true; render();
+        let x = await goTo(d, d.press);
+        if (x === 'ok' || x === 'demo' || x === 'sent') { await sleep(900); x = await goTo(d, d.rest); }
+        busy[d.id] = false; addLog({ what: d.name + ': press', result: x }); render(); await sleep(400); shoot(d);
+      };
+      // Sync: an action on a ticked servo runs on every ticked servo at once, each with its own angles.
+      const grp = d => d.sync ? S.devices.filter(x => x.sync).map(mv) : [d];
+      const both = (ds, f) => Promise.all(ds.map(f));
+      v.querySelectorAll('[data-press]').forEach(b => b.onclick = () => {
+        const ds = grp(mv(dev(b.dataset.press))); const go = () => both(ds, doPress);
+        const ask = ds.find(x => x.confirm); ask ? confirmSheet(ask, go) : go();
+      });
+      v.querySelectorAll('[data-rest]').forEach(b => b.onclick = () => both(grp(mv(dev(b.dataset.rest))), d => goTo(d, d.rest)));
+      v.querySelectorAll('[data-step]').forEach(b => b.onclick = () => both(grp(mv(dev(b.dataset.id))), d => {
+        const cur = S.angle[d.id] ?? 0; return goTo(d, Math.max(-100, Math.min(100, cur + (+b.dataset.step) * d.step)));
+      }));
+      v.querySelectorAll('[data-sync]').forEach(cb => cb.onchange = () => {
+        const d = S.devices.find(x => x.id === cb.dataset.sync); if (!d) return; d.sync = cb.checked; save(); render();
+      });
+      // Photo from the board's eye; taken on request and after each press or full turn.
+      const shoot = async d => {
+        if (!d.camera) return;
+        const url = await snapshot(d);
+        if (url) { lastPhoto[d.host] = url; lastPhoto[d.host + '_t'] = now(); render(); } else toast('No photo from the eye');
+      };
+      v.querySelectorAll('[data-snap]').forEach(b => b.onclick = () => shoot(dev(b.dataset.snap)));
+      v.querySelectorAll('[data-teach]').forEach(b => b.onclick = () => teachSheet(mv(dev(b.dataset.teach))));
+      v.querySelectorAll('[data-run]').forEach(b => b.onclick = () => {
+        const host = b.dataset.run, i = +b.dataset.i, p = S.positions[host][i];
+        const d = mv(S.devices.find(x => x.host === host && !(x.servo > 1)));
+        const go = () => runPosition(host, i, shoot);
+        p.type !== 'move' && d.confirm ? confirmSheet(d, go) : go();
+      });
+      v.querySelectorAll('[data-adv] > summary').forEach(sm => sm.onclick = () => { const dt = sm.parentElement; S.adv[dt.dataset.adv] = !dt.open; });   // user toggles only
+      v.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => {
+        const d = S.devices.find(x => x.id === b.dataset.id); if (!d || d.move === b.dataset.mode) return;
+        d.move = b.dataset.mode; delete S.angle[d.id]; save(); render();
+      });
+      const sweep = async d => {
+        busy[d.id] = true; render();
+        let x = await goTo(d, -100);
+        if (x === 'ok' || x === 'demo' || x === 'sent') { await sleep(1200); x = await goTo(d, 100); await sleep(1500); x = await goTo(d, 0); }
+        busy[d.id] = false; addLog({ what: d.name + ': full turn', result: x }); render(); shoot(d);
+      };
+      v.querySelectorAll('[data-sweep]').forEach(b => b.onclick = () => both(grp(mv(dev(b.dataset.sweep))), sweep));
+      v.querySelectorAll('[data-center]').forEach(b => b.onclick = () => both(grp(mv(dev(b.dataset.center))), d => goTo(d, 0)));
+      v.querySelectorAll('[data-turn]').forEach(rg => {
+        let t; rg.oninput = () => { const d = mv(dev(rg.dataset.turn)); S.angle[d.id] = +rg.value; rg.closest('.ctl').querySelector('.readout').textContent = rg.value;
+          clearTimeout(t); t = setTimeout(() => both(grp(d), async x => { S.angle[x.id] = +rg.value; res(await setAngle(x, +rg.value)); }), 180); };
+      });
+    }
+    if (r === 'setup' && !viaMac) {
+      const si = v.querySelector('#cloudIn');
+      if (si) si.onclick = () => {
+        const host = v.querySelector('#cHost').value.trim().replace(/^(wss?|https?|mqtts?):\/\//, '').replace(/[:\/].*$/, '');
+        const user = v.querySelector('#cUser').value.trim(), pass = v.querySelector('#cPass').value;
+        if (!host || !user || !pass) return toast('Fill in all three');
+        store.set('cloud', { host, user, pass }); location.hash = '#panel'; location.reload();
+      };
+      const so = v.querySelector('#cloudOut');
+      if (so) so.onclick = () => { store.set('cloud', null); location.reload(); };
+    }
+    if (r === 'setup' && (viaMac || cloud)) {
+      v.querySelectorAll('[data-k]').forEach(inp => inp.onchange = () => {
+        const d = S.devices[+inp.dataset.i]; const k = inp.dataset.k;
+        if (inp.type === 'checkbox') d[k] = inp.checked;
+        else if (inp.type === 'number') { const lim = k === 'step' ? [1, 50] : [-100, 100]; d[k] = Math.max(lim[0], Math.min(lim[1], Math.round(+inp.value || 0))); inp.value = d[k]; }
+        else if (k === 'move') { d[k] = inp.value; delete S.angle[d.id]; }
+        else d[k] = inp.value.trim().replace(/^https?:\/\//, '').replace(/\/$/, '');
+        if (k === 'host') S.status[d.id] = null;
+        save(); toast('Saved'); if (k === 'move') render();
+      });
+      v.querySelectorAll('[data-forget]').forEach(b => b.onclick = () => { S.devices.splice(+b.dataset.forget, 1); save(); render(); toast('Removed'); });
+      const addB = v.querySelector('#add'); if (addB) addB.onclick = () => {
+        const h = v.querySelector('#addHost').value.trim().replace(/^https?:\/\//, '').replace(/\/$/, '');
+        if (!h) return;
+        if (!S.devices.some(d => d.host === h)) S.devices.push({ id: h, name: 'Annex ' + h, host: h, camera: false, finger: true, confirm: false, manual: true });
+        save(); refreshAll(); toast('Added');
+      };
+      return;
+    }
+    if (r === 'setup') {
+      const dm = v.querySelector('#demo'); dm.onchange = () => { S.demo = dm.checked; S.status = {}; save(); refreshAll(); toast(S.demo ? 'Demo mode on' : 'Talking to your annexes'); };
+      v.querySelectorAll('input[data-k]').forEach(inp => inp.onchange = () => {
+        const d = S.devices[+inp.dataset.i]; const k = inp.dataset.k;
+        d[k] = inp.type === 'checkbox' ? inp.checked : inp.value.trim().replace(/^https?:\/\//, '').replace(/\/$/, '');
+        S.status[d.id] = null; save(); toast('Saved');
+      });
+      v.querySelector('#reset').onclick = () => { S.devices = JSON.parse(JSON.stringify(defaults)); save(); render(); toast('Reset'); };
+    }
+  }
+  // Ask the Mac to look for ESPHome annexes on the Wi-Fi and merge them in.
+  async function discover() {
+    if (!viaMac) return;
+    S.searching = true; render();
+    try {
+      const found = await (await fetch('/annexes')).json();
+      // Remember names and angles per address, so an unplugged board comes back with its settings.
+      const known = store.get('known', {}); S.devices.forEach(d => known[d.id] = d); store.set('known', known);
+      // Boards missing from one search stay in the list (shown offline): a weak Wi-Fi moment must not hide them.
+      // Remove a board for good under Setup.
+      for (const f of found) {
+        // The board's own entry (servo 1) carries the card; servos 2+ hang under it.
+        const isMain = d => d.host === f.host && !(d.servo > 1);
+        if (!S.devices.some(isMain) && known[f.host] && !(known[f.host].servo > 1)) S.devices.push(known[f.host]);
+        const old = S.devices.find(isMain);
+        if (old) { old.camera = f.camera; old.finger = f.finger; }
+        else S.devices.push({ id: f.host, name: f.name, host: f.host, camera: f.camera, finger: f.finger, confirm: false });
+        // Extra servos on the same board get their own card. If the Mac server did not count them, ask the board.
+        if (f.servos === undefined && f.finger) {
+          f.servos = 1;
+          for (let n = 2; n <= 6; n++) {
+            let ok = false;
+            for (const k of [`servo_${n}_angle`, encodeURIComponent(`Servo ${n} angle`)]) {
+              try { const r = await fetch(`/dev/${f.host}/number/${k}`); if (r.ok) { ok = true; break; } } catch (e) {}
+            }
+            if (!ok) break; f.servos = n;
+          }
+        }
+        // A servo that is no longer on the board loses its card.
+        S.devices = S.devices.filter(d => !(d.host === f.host && d.servo > (f.servos || 1)));
+        for (let n = 2; n <= (f.servos || 1); n++) {
+          const id = `${f.host}#${n}`;
+          if (!S.devices.some(d => d.id === id)) S.devices.push(known[id] || { id, name: `${f.name} · servo ${n}`, host: f.host, servo: n, camera: f.camera, finger: true, confirm: false });
+        }
+      }
+      repairBoards();
+      if (!S.devices.some(d => d.id === S.current) && S.devices[0]) S.current = S.devices[0].id;
+      save();
+      if (!found.length) toast('No annexes found on this Wi-Fi');
+    } catch (e) { toast('Search failed'); }
+    S.searching = false;
+    await refreshAll();
+  }
+  // A board whose servo-1 entry was removed in Setup would leave servos 2+ without a card: give it one back.
+  function repairBoards() {
+    const hosts = [...new Set(S.devices.filter(d => d.servo > 1).map(d => d.host))];
+    for (const h of hosts) {
+      if (S.devices.some(d => d.host === h && !(d.servo > 1))) continue;
+      const x = S.devices.find(d => d.host === h);
+      const name = (x.name || h).replace(/ · servo \d+$/, '');
+      S.devices.push({ id: h, name, host: h, camera: x.camera, finger: true, confirm: false });
+    }
+  }
+  async function refreshAll() { render(); await Promise.all(S.devices.map(ping)); render(); }
+  window.addEventListener('hashchange', render);
+  if (S.demo) S.devices.forEach(d => { if (d.camera) { lastPhoto[d.id] = demoPhoto(d.id); lastPhoto[d.id + '_t'] = now(); } });
+  if (!S.log.length && S.demo) S.log = [{ time: '07:12', what: 'Test plate · eye: test press', result: 'Done (example)', photo: lastPhoto.eye }];
+  repairBoards();
+  // No confirm window by default any more: switch it off once for the boards already in the list.
+  // Positions stay where they go: switch the ones taught so far to 'stay' once.
+  if (!store.get('stayAll', false)) { Object.values(S.positions).forEach(l => l.forEach(p => p.type = 'move')); store.set('stayAll', true); save(); }
+  if (!store.get('noConfirm', false)) { S.devices.forEach(d => d.confirm = false); store.set('noConfirm', true); save(); }
+  // Every minute: check the boards again (online state, battery), without disturbing an open sheet.
+  setInterval(async () => { if (S.demo || S.searching || cloud) return; await Promise.all(S.devices.filter(d => !(d.servo > 1)).map(ping)); if (!document.getElementById('overlay').innerHTML) render(); }, 60000);
+  if (viaMac) { pullState().then(() => refreshAll()).then(discover); }
+  else if (cloud) { render(); connectCloud(); }
+  else refreshAll();
+})();
+</script>
