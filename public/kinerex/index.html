@@ -310,7 +310,7 @@ nav.tabs .inner { max-width: 480px; margin: 0 auto; display: grid; grid-template
     const url = `wss://${cloudCfg.host}:${cloudCfg.port || (/emqx/i.test(cloudCfg.host) ? 8084 : 8884)}/mqtt`;
     mq = window.mqtt.connect(url, { username: cloudCfg.user, password: cloudCfg.pass, clientId: 'kinerex-app-' + Math.random().toString(16).slice(2, 10), reconnectPeriod: 4000, connectTimeout: 10000, clean: true });
     let gotState = false;
-    const startT = setTimeout(() => { if (!pulled) { pulled = true; save(); } }, 3000);   // no shared state yet: start from this device's
+    const startT = setTimeout(() => { if (!pulled) { pulled = true; applyImport(); save(); } }, 3000);   // no shared state yet: start from this device's
     mq.on('connect', () => {
       S.net = 'online'; render();
       mq.subscribe([`${ROOT}/+/status`, `${ROOT}/+/number/+/state`, `${ROOT}/+/sensor/+/state`, `${ROOT}/+/photo`, `${ROOT}/app/state`]);
@@ -336,7 +336,7 @@ nav.tabs .inner { max-width: 480px; margin: 0 auto; display: grid; grid-template
           for (const [h, l] of Object.entries(st.positions || {})) if (l && l.length) S.positions[h] = l;
           for (const sd of st.devices || []) { const d = S.devices.find(x => x.id === sd.id); if (!d) S.devices.push(sd); else ['name', 'move', 'rest', 'press', 'step', 'confirm', 'sync'].forEach(k => { if (sd[k] !== undefined) d[k] = sd[k]; }); }
         } catch (e) {}
-        pulled = true; save(); redrawSoon(); return;
+        pulled = true; applyImport(); save(); redrawSoon(); return;
       }
       const h = t[1]; let changed = false;
       if (t[2] === 'status') {
@@ -367,6 +367,20 @@ nav.tabs .inner { max-width: 480px; margin: 0 auto; display: grid; grid-template
       (photoWait[d.host] = photoWait[d.host] || []).push(done);
       mq.publish(`${ROOT}/${d.host}/photo/take`, '1', { qos: 0 });
     });
+  }
+  // Positions brought over from the home (Mac) version: a link ending in #import=<base64url JSON {positions:{host:[...]}}>.
+  // They are added once (same name = already there) and then shared through the cloud like any other.
+  const pendingImport = (() => { const m = /^#import=([\w-]+)$/.exec(location.hash); if (!m) return null;
+    try { const b = m[1].replace(/-/g, '+').replace(/_/g, '/'); return JSON.parse(decodeURIComponent(escape(atob(b)))); } catch (e) { return null; } })();
+  function applyImport() {
+    if (!pendingImport) return;
+    let n = 0;
+    for (const [h, list] of Object.entries(pendingImport.positions || {})) {
+      const cur = S.positions[h] = S.positions[h] || [];
+      for (const p of list) if (!cur.some(q => q.name === p.name)) { cur.push(p); n++; }
+    }
+    history.replaceState(null, '', location.pathname + '#panel');
+    setTimeout(() => toast(n ? `${n} positions added` : 'Positions were already there'), 300);
   }
   const pushCloud = () => { clearTimeout(pushT); pushT = setTimeout(() => { if (mq && mq.connected) mq.publish(`${ROOT}/app/state`, JSON.stringify({ positions: S.positions, devices: S.devices }), { retain: true, qos: 1 }); }, 400); };
   function cloudPost(d, kind, objectId, action, query) {
