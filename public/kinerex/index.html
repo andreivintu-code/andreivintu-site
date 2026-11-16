@@ -306,7 +306,8 @@ nav.tabs .inner { max-width: 480px; margin: 0 auto; display: grid; grid-template
   const redrawSoon = () => { clearTimeout(redrawT); redrawT = setTimeout(() => { if (!document.getElementById('overlay').innerHTML) render(); }, 250); };
   function connectCloud() {
     if (!window.mqtt) { S.net = 'offline'; render(); return; }
-    const url = `wss://${cloudCfg.host}:${cloudCfg.port || 8884}/mqtt`;
+    // EMQX Cloud Serverless: WebSocket over TLS on 8084; HiveMQ Cloud: 8884. Path /mqtt on both.
+    const url = `wss://${cloudCfg.host}:${cloudCfg.port || (/emqx/i.test(cloudCfg.host) ? 8084 : 8884)}/mqtt`;
     mq = window.mqtt.connect(url, { username: cloudCfg.user, password: cloudCfg.pass, clientId: 'kinerex-app-' + Math.random().toString(16).slice(2, 10), reconnectPeriod: 4000, connectTimeout: 10000, clean: true });
     let gotState = false;
     const startT = setTimeout(() => { if (!pulled) { pulled = true; save(); } }, 3000);   // no shared state yet: start from this device's
@@ -578,7 +579,7 @@ nav.tabs .inner { max-width: 480px; margin: 0 auto; display: grid; grid-template
       ${cloud ? `<p class="note" style="margin:0">Connected to <b>${esc(cloudCfg.host)}</b> as <b>${esc(cloudCfg.user)}</b>. Annexes that are online appear by themselves.</p>
         <div class="btns"><button class="btn small" id="cloudOut">Sign out</button><span></span></div>`
       : `<p class="note" style="margin:0">Sign in to the KineRex cloud to control your annexes from anywhere. The login stays on this device.</p>
-        <div class="field"><label for="cHost">Broker address</label><input type="text" id="cHost" placeholder="xxxx.s1.eu.hivemq.cloud" inputmode="url" autocapitalize="off" spellcheck="false"></div>
+        <div class="field"><label for="cHost">Broker address</label><input type="text" id="cHost" placeholder="xxxx.ala.eu-central-1.emqxsl.com" inputmode="url" autocapitalize="off" spellcheck="false"></div>
         <div class="field"><label for="cUser">User</label><input type="text" id="cUser" autocapitalize="off" spellcheck="false" autocomplete="username"></div>
         <div class="field"><label for="cPass">Password</label><input type="password" id="cPass" autocomplete="current-password"></div>
         <button class="btn small" id="cloudIn">Sign in</button>`}</section>`;
