@@ -313,13 +313,22 @@ nav.tabs .inner { max-width: 480px; margin: 0 auto; display: grid; grid-template
     const startT = setTimeout(() => { if (!pulled) { pulled = true; save(); } }, 3000);   // no shared state yet: start from this device's
     mq.on('connect', () => {
       S.net = 'online'; render();
-      mq.subscribe([`${ROOT}/+/status`, `${ROOT}/+/number/+/state`, `${ROOT}/+/sensor/+/state`, `${ROOT}/app/state`]);
+      mq.subscribe([`${ROOT}/+/status`, `${ROOT}/+/number/+/state`, `${ROOT}/+/sensor/+/state`, `${ROOT}/+/photo`, `${ROOT}/app/state`]);
     });
     mq.on('reconnect', () => { if (S.net !== 'denied') { S.net = 'connecting'; redrawSoon(); } });
     mq.on('offline', () => { if (S.net !== 'denied') { S.net = 'offline'; redrawSoon(); } });
     mq.on('error', e => { if (/auth|Not authorized|Bad user/i.test(String(e && e.message))) { S.net = 'denied'; mq.end(true); render(); } });
     mq.on('message', (topic, buf) => {
-      const msg = buf.toString(); const t = topic.split('/');
+      const t = topic.split('/');
+      if (t[2] === 'photo' && t.length === 3) {          // a JPEG from the annex's eye
+        const h = t[1]; ensureBoard(h);
+        S.devices.filter(d => d.host === h && !(d.servo > 1)).forEach(d => d.camera = true);
+        if (lastPhoto[h] && lastPhoto[h].startsWith('blob:')) URL.revokeObjectURL(lastPhoto[h]);
+        lastPhoto[h] = URL.createObjectURL(new Blob([buf], { type: 'image/jpeg' })); lastPhoto[h + '_t'] = now();
+        (photoWait[h] || []).forEach(f => f(lastPhoto[h])); photoWait[h] = [];
+        save(); redrawSoon(); return;
+      }
+      const msg = buf.toString();
       if (t[1] === 'app' && t[2] === 'state') {
         if (gotState) return; gotState = true; clearTimeout(startT);
         try {
@@ -347,6 +356,16 @@ nav.tabs .inner { max-width: 480px; margin: 0 auto; display: grid; grid-template
       }
       if (changed) save();
       redrawSoon();
+    });
+  }
+  const photoWait = {};
+  function cloudPhoto(d) {
+    if (!mq || !mq.connected) return Promise.resolve(null);
+    return new Promise(res => {
+      const done = url => { clearTimeout(t); res(url); };
+      const t = setTimeout(() => { photoWait[d.host] = (photoWait[d.host] || []).filter(f => f !== done); res(null); }, 10000);
+      (photoWait[d.host] = photoWait[d.host] || []).push(done);
+      mq.publish(`${ROOT}/${d.host}/photo/take`, '1', { qos: 0 });
     });
   }
   const pushCloud = () => { clearTimeout(pushT); pushT = setTimeout(() => { if (mq && mq.connected) mq.publish(`${ROOT}/app/state`, JSON.stringify({ positions: S.positions, devices: S.devices }), { retain: true, qos: 1 }); }, 400); };
@@ -399,7 +418,8 @@ nav.tabs .inner { max-width: 480px; margin: 0 auto; display: grid; grid-template
   }
   async function snapshot(d) {
     if (S.demo) return demoPhoto(d.id);
-    if (!d.camera || cloud) return null;      // online: no camera image yet
+    if (!d.camera) return null;
+    if (cloud) return cloudPhoto(d);          // online: the annex sends one JPEG through the broker
     const url = viaMac ? `/dev/${d.host}:8081/?t=${Date.now()}` : `http://${d.host}:8081/?t=${Date.now()}`;
     await new Promise(res => { const i = new Image(); i.onload = i.onerror = res; i.src = url; });
     return url;
@@ -489,7 +509,7 @@ nav.tabs .inner { max-width: 480px; margin: 0 auto; display: grid; grid-template
       const eye = d.camera
         ? `<section class="photo" aria-label="Photo from the eye of ${esc(d.name)}">${ph ? `<img src="${esc(ph)}" alt="Latest photo from ${esc(d.name)}">` : '<div class="empty">No photo yet. Tap Take photo.</div>'}
            <div class="cap"><span>EYE · SNAPSHOT</span><span>${esc(lastPhoto[d.host + '_t'] || '')}</span></div></section>
-           <div class="btns"><button class="btn small" data-snap="${esc(d.id)}">Take photo</button>${!S.demo ? `<a class="btn small" style="display:flex;align-items:center;justify-content:center;text-decoration:none" href="http://${esc(d.host)}:8080" target="_blank" rel="noopener">Live view</a>` : '<span></span>'}</div>`
+           <div class="btns"><button class="btn small" data-snap="${esc(d.id)}">Take photo</button>${!S.demo && !cloud ? `<a class="btn small" style="display:flex;align-items:center;justify-content:center;text-decoration:none" href="http://${esc(d.host)}:8080" target="_blank" rel="noopener">Live view</a>` : '<span></span>'}</div>`
         : '';
       const ctls = extras.length
         ? `<div class="ctls-multi">${ctl(d, 'Servo 1') + extras.map(x => ctl(x, 'Servo ' + x.servo)).join('')}</div>`
@@ -512,7 +532,7 @@ nav.tabs .inner { max-width: 480px; margin: 0 auto; display: grid; grid-template
     const photo = d.camera || S.demo
       ? `<section class="photo" aria-label="Photo from the eye">${ph ? `<img src="${esc(ph)}" alt="Latest photo from the eye">` : '<div class="empty">No photo yet. Tap Take photo.</div>'}
          <div class="cap"><span>EYE · SNAPSHOT</span><span id="snapTime">${esc(lastPhoto[d.id + '_t'] || '')}</span></div></section>
-         <div class="btns"><button class="btn small" id="snap">Take photo</button>${!S.demo ? `<a class="btn small" style="display:flex;align-items:center;justify-content:center;text-decoration:none" href="http://${esc(d.host)}:8080" target="_blank" rel="noopener">Live view for aiming</a>` : '<span></span>'}</div>`
+         <div class="btns"><button class="btn small" id="snap">Take photo</button>${!S.demo && !cloud ? `<a class="btn small" style="display:flex;align-items:center;justify-content:center;text-decoration:none" href="http://${esc(d.host)}:8080" target="_blank" rel="noopener">Live view for aiming</a>` : '<span></span>'}</div>`
       : `<div class="card"><p class="note">This annex has no eye. Pair it with the test plate eye for photo proof.</p></div>`;
     return `<header class="top"><p class="eyebrow">${esc(d.host)}</p><div class="row"><h1>${esc(d.name)}</h1><span class="panel-head">${batt(st)}${pill(st)}</span></div></header>
       ${photo}
