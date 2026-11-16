@@ -93,7 +93,7 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 
 .field { display: flex; flex-direction: column; gap: 6px; }
 .field label { font-weight: 700; font-size: 14px; }
-.field select, .field input[type=number], .field input[type=text] { font: inherit; min-height: 44px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); padding: 0 12px; }
+.field select, .field input[type=number], .field input[type=text], .field input[type=password] { font: inherit; min-height: 44px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); padding: 0 12px; }
 .check { display: flex; align-items: center; gap: 10px; font-weight: 700; }
 .check input { width: 20px; height: 20px; accent-color: var(--accent); }
 .linkname { font: inherit; font-weight: 800; font-size: 16px; color: var(--fg); background: none; border: 0; padding: 0; cursor: pointer; text-align: left; }
@@ -587,7 +587,7 @@ nav.tabs .inner { max-width: 480px; margin: 0 auto; display: grid; grid-template
       <h2>Annexes</h2>${rows.replace(/data-k="host"/g, 'data-k="host" readonly') || '<p class="note">None online yet. Switch an annex on; it appears here when it connects.</p>'}`;
     return `<header class="top"><p class="eyebrow">Local first</p><h1>Setup</h1></header>${cloudCard}
       <section class="card"><label class="check"><input type="checkbox" id="demo" ${S.demo ? 'checked' : ''} ${onHttps ? 'disabled' : ''}> Demo mode (no hardware)</label>
-      <p class="note">${onHttps ? 'Live mode needs the page opened from your Mac on the same Wi-Fi.' : 'Turn off to talk to the annexes on your Wi-Fi.'}</p></section>
+      <p class="note">${onHttps ? 'Sign in above to control your real annexes from anywhere. Demo mode only shows how the app works.' : 'Turn off to talk to the annexes on your Wi-Fi.'}</p></section>
       <h2>Annexes</h2>${rows}
       <p class="note">On Android phones <code>.local</code> names often don't resolve. Use the annex's IP address instead, shown in the ESPHome dashboard, for example <code>192.168.1.42</code>.</p>
       <button class="btn small" id="reset">Reset to the two test plate annexes</button>`;
