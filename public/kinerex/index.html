@@ -308,12 +308,14 @@ nav.tabs .inner { max-width: 480px; margin: 0 auto; display: grid; grid-template
     if (!window.mqtt) { S.net = 'offline'; render(); return; }
     // EMQX Cloud Serverless: WebSocket over TLS on 8084; HiveMQ Cloud: 8884. Path /mqtt on both.
     const url = `wss://${cloudCfg.host}:${cloudCfg.port || (/emqx/i.test(cloudCfg.host) ? 8084 : 8884)}/mqtt`;
-    mq = window.mqtt.connect(url, { username: cloudCfg.user, password: cloudCfg.pass, clientId: 'kinerex-app-' + Math.random().toString(16).slice(2, 10), reconnectPeriod: 4000, connectTimeout: 10000, clean: true });
-    let gotState = false;
-    const startT = setTimeout(() => { if (!pulled) { pulled = true; applyImport(); save(); } }, 3000);   // no shared state yet: start from this device's
+    mq = window.mqtt.connect(url, { username: cloudCfg.user, password: cloudCfg.pass, clientId: myId, reconnectPeriod: 4000, connectTimeout: 10000, clean: true });
+    let startT;
     mq.on('connect', () => {
       S.net = 'online'; render();
-      mq.subscribe([`${ROOT}/+/status`, `${ROOT}/+/number/+/state`, `${ROOT}/+/sensor/+/state`, `${ROOT}/+/photo`, `${ROOT}/app/state`]);
+      mq.subscribe([`${ROOT}/+/status`, `${ROOT}/+/number/+/state`, `${ROOT}/+/sensor/+/state`, `${ROOT}/+/photo`, `${ROOT}/app/state`], () => {
+        // Retained messages arrive right after the subscription is confirmed. If no shared state comes, there is none yet.
+        clearTimeout(startT); startT = setTimeout(() => { if (!pulled) takeShared({}); }, 2500);
+      });
     });
     mq.on('reconnect', () => { if (S.net !== 'denied') { S.net = 'connecting'; redrawSoon(); } });
     mq.on('offline', () => { if (S.net !== 'denied') { S.net = 'offline'; redrawSoon(); } });
@@ -330,13 +332,9 @@ nav.tabs .inner { max-width: 480px; margin: 0 auto; display: grid; grid-template
       }
       const msg = buf.toString();
       if (t[1] === 'app' && t[2] === 'state') {
-        if (gotState) return; gotState = true; clearTimeout(startT);
-        try {
-          const st = JSON.parse(msg);
-          for (const [h, l] of Object.entries(st.positions || {})) if (l && l.length) S.positions[h] = l;
-          for (const sd of st.devices || []) { const d = S.devices.find(x => x.id === sd.id); if (!d) S.devices.push(sd); else ['name', 'move', 'rest', 'press', 'step', 'confirm', 'sync'].forEach(k => { if (sd[k] !== undefined) d[k] = sd[k]; }); }
-        } catch (e) {}
-        pulled = true; applyImport(); save(); redrawSoon(); return;
+        let st; try { st = JSON.parse(msg); } catch (e) { return; }
+        if (st.from === myId) return;                   // my own update coming back
+        clearTimeout(startT); takeShared(st); return;
       }
       const h = t[1]; let changed = false;
       if (t[2] === 'status') {
@@ -382,7 +380,28 @@ nav.tabs .inner { max-width: 480px; margin: 0 auto; display: grid; grid-template
     history.replaceState(null, '', location.pathname + '#panel');
     setTimeout(() => toast(n ? `${n} positions added` : 'Positions were already there'), 300);
   }
-  const pushCloud = () => { clearTimeout(pushT); pushT = setTimeout(() => { if (mq && mq.connected) mq.publish(`${ROOT}/app/state`, JSON.stringify({ positions: S.positions, devices: S.devices }), { retain: true, qos: 1 }); }, 400); };
+  // Shared positions: the retained message kinerex/app/state is the master copy. A device takes it as it comes
+  // (also later, live), and only publishes when its own positions differ from it (after teaching, renaming, deleting).
+  // A board whose list is empty in the shared copy keeps this device's list, so a fresh phone can never wipe it.
+  const myId = 'kinerex-app-' + Math.random().toString(16).slice(2, 10);
+  let sharedJson = null;
+  // Cloud annexes are named (finger-annex), never addresses: leave out demo and home-network entries.
+  const ownPositions = () => { const o = {};
+    for (const [h, l] of Object.entries(S.positions)) if (!/[.:]/.test(h) && l && l.length) o[h] = l; return o; };
+  function takeShared(st) {
+    const merged = ownPositions();
+    for (const [h, l] of Object.entries(st.positions || {})) if (l && l.length) merged[h] = l;
+    for (const sd of st.devices || []) { const d = S.devices.find(x => x.id === sd.id); if (!d) S.devices.push(sd); else ['name', 'move', 'rest', 'press', 'step', 'confirm', 'sync'].forEach(k => { if (sd[k] !== undefined) d[k] = sd[k]; }); }
+    S.positions = merged; sharedJson = JSON.stringify(st.positions || {});
+    pulled = true; applyImport(); save(); redrawSoon();
+  }
+  const pushCloud = () => { clearTimeout(pushT); pushT = setTimeout(() => {
+    if (!mq || !mq.connected) return;
+    const own = ownPositions(), j = JSON.stringify(own);
+    if (j === sharedJson) return;
+    mq.publish(`${ROOT}/app/state`, JSON.stringify({ from: myId, positions: own, devices: S.devices }), { retain: true, qos: 1 });
+    sharedJson = j;
+  }, 400); };
   function cloudPost(d, kind, objectId, action, query) {
     if (!mq || !mq.connected) return 'offline';
     if ((S.status[d.host] || {}).state === 'offline') return 'offline';
