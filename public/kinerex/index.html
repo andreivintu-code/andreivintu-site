@@ -579,7 +579,7 @@ nav.tabs .inner { max-width: 480px; margin: 0 auto; display: grid; grid-template
       ${cloud ? `<p class="note" style="margin:0">Connected to <b>${esc(cloudCfg.host)}</b> as <b>${esc(cloudCfg.user)}</b>. Annexes that are online appear by themselves.</p>
         <div class="btns"><button class="btn small" id="cloudOut">Sign out</button><span></span></div>`
       : `<p class="note" style="margin:0">Sign in to the KineRex cloud to control your annexes from anywhere. The login stays on this device.</p>
-        <div class="field"><label for="cHost">Broker address</label><input type="text" id="cHost" placeholder="xxxx.ala.eu-central-1.emqxsl.com" inputmode="url" autocapitalize="off" spellcheck="false"></div>
+        <div class="field"><label for="cHost">Broker address</label><input type="text" id="cHost" value="ua92c62b.ala.eu-central-1.emqxsl.com" placeholder="xxxx.ala.eu-central-1.emqxsl.com" inputmode="url" autocapitalize="off" spellcheck="false"></div>
         <div class="field"><label for="cUser">User</label><input type="text" id="cUser" autocapitalize="off" spellcheck="false" autocomplete="username"></div>
         <div class="field"><label for="cPass">Password</label><input type="password" id="cPass" autocomplete="current-password"></div>
         <button class="btn small" id="cloudIn">Sign in</button>`}</section>`;
