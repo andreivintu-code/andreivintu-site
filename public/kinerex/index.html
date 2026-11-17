@@ -227,7 +227,8 @@ nav.tabs .inner { max-width: 480px; margin: 0 auto; display: grid; grid-template
   const S = {
     devices: viaMac ? store.get('found', []) : cloud ? store.get('cloudDevices', []) : store.get('devices', defaults),
     demo: !viaMac && !cloud,
-    net: cloud ? 'connecting' : null,           // cloud link: connecting | online | offline | denied
+    net: cloud ? 'connecting' : null,
+    tombs: store.get('tombs', {}),              // deleted position ids per board, with the time of deletion           // cloud link: connecting | online | offline | denied
     searching: false,
     log: store.get('log', []),
     current: store.get('current', 'eye'),
@@ -383,23 +384,34 @@ nav.tabs .inner { max-width: 480px; margin: 0 auto; display: grid; grid-template
   // Shared positions: the retained message kinerex/app/state is the master copy. A device takes it as it comes
   // (also later, live), and only publishes when its own positions differ from it (after teaching, renaming, deleting).
   // A board whose list is empty in the shared copy keeps this device's list, so a fresh phone can never wipe it.
+  const pid = p => p.id || ('n:' + p.name);          // positions saved before ids existed are known by name
   const myId = 'kinerex-app-' + Math.random().toString(16).slice(2, 10);
   let sharedJson = null;
   // Cloud annexes are named (finger-annex), never addresses: leave out demo and home-network entries.
   const ownPositions = () => { const o = {};
     for (const [h, l] of Object.entries(S.positions)) if (!/[.:]/.test(h) && l && l.length) o[h] = l; return o; };
+  const ownTombs = () => { const o = {}; for (const [h, m] of Object.entries(S.tombs)) if (!/[.:]/.test(h)) o[h] = m; return o; };
+  // Lists from two devices are joined, not replaced: every position keeps its id; the newer copy of an
+  // id wins, and an id deleted on any device stays deleted. No device can wipe another's positions.
+  function joinLists(a = [], b = [], tomb = {}) {
+    const by = new Map();
+    for (const p of [...a, ...b]) { const k = pid(p), q = by.get(k); if (!q || (p.t || 0) > (q.t || 0)) by.set(k, p); }
+    return [...by.values()].filter(p => !(tomb[pid(p)] >= (p.t || 0))).sort((x, y) => (x.c || 0) - (y.c || 0));
+  }
   function takeShared(st) {
-    const merged = ownPositions();
-    for (const [h, l] of Object.entries(st.positions || {})) if (l && l.length) merged[h] = l;
+    for (const [h, m] of Object.entries(st.deleted || {})) { const tb = S.tombs[h] = S.tombs[h] || {}; for (const [k, t] of Object.entries(m)) tb[k] = Math.max(tb[k] || 0, t); }
+    const own = ownPositions(), sp = st.positions || {};
+    for (const h of new Set([...Object.keys(own), ...Object.keys(sp)])) S.positions[h] = joinLists(own[h], sp[h], S.tombs[h]);
     for (const sd of st.devices || []) { const d = S.devices.find(x => x.id === sd.id); if (!d) S.devices.push(sd); else ['name', 'move', 'rest', 'press', 'step', 'confirm', 'sync'].forEach(k => { if (sd[k] !== undefined) d[k] = sd[k]; }); }
-    S.positions = merged; sharedJson = JSON.stringify(st.positions || {});
+    store.set('tombs', S.tombs);
+    sharedJson = JSON.stringify([sp, st.deleted || {}]);
     pulled = true; applyImport(); save(); redrawSoon();
   }
   const pushCloud = () => { clearTimeout(pushT); pushT = setTimeout(() => {
     if (!mq || !mq.connected) return;
-    const own = ownPositions(), j = JSON.stringify(own);
+    const own = ownPositions(), del = ownTombs(), j = JSON.stringify([own, del]);
     if (j === sharedJson) return;
-    mq.publish(`${ROOT}/app/state`, JSON.stringify({ from: myId, positions: own, devices: S.devices }), { retain: true, qos: 1 });
+    mq.publish(`${ROOT}/app/state`, JSON.stringify({ from: myId, v: 2, positions: own, deleted: del, devices: S.devices }), { retain: true, qos: 1 });
     sharedJson = j;
   }, 400); };
   function cloudPost(d, kind, objectId, action, query) {
@@ -653,7 +665,8 @@ nav.tabs .inner { max-width: 480px; margin: 0 auto; display: grid; grid-template
   function teachSheet(board) {
     const o = document.getElementById('overlay');
     const servos = [board].concat(S.devices.filter(x => x.host === board.host && x.servo > 1).sort((a, b) => a.servo - b.servo));
-    const list = S.positions[board.host] = S.positions[board.host] || [];
+    // Always the live list: a shared update from another device may replace it while this sheet is open.
+    const L = () => (S.positions[board.host] = S.positions[board.host] || []);
     let timer = {};
     // ---- finger model: side view (J2 base, J3 elbow) and top view (J1 turret); Servo 1-4 = J1-J4 ----
     const model = servos.length >= 3;
@@ -746,7 +759,7 @@ nav.tabs .inner { max-width: 480px; margin: 0 auto; display: grid; grid-template
       drawModel();
     }
     const draw = () => {
-      const n = list.length + 1;
+      const n = L().length + 1;
       o.innerHTML = `<div class="sheet-bg" id="sbg"><div class="sheet wide" role="dialog" aria-modal="true" aria-labelledby="th">
         <div class="row"><h3 id="th">Teach ${esc(board.name)}</h3><span class="pill p-info"><span class="dot"></span>Teach mode</span></div>
         <p class="note">${model ? 'Drag the fingertip in the side view, and the finger end in the top view to turn the turret. Each servo follows; the rows below show which one moved.' : 'Put the fingertip on the button you want, then save it. With angle sensors on the joints you move the finger by hand; until then, use the arrows and sliders.'}</p>
@@ -762,7 +775,7 @@ nav.tabs .inner { max-width: 480px; margin: 0 auto; display: grid; grid-template
           <option value="move">Stay: go there and stay</option>
           <option value="press">Press: go there, press, come back</option></select></div>
         <button class="btn primary" id="tsave">Save as position ${n}</button>
-        ${list.length ? `<h3 style="font-size:15px">Saved positions</h3><ul class="tlist">${list.map((p, i) => `<li><span><b>${i + 1}</b> · ${esc(p.name)} <span class="note">(${p.type === 'move' ? 'stay' : 'press'})</span></span><button class="btn small" data-del="${i}">Delete</button></li>`).join('')}</ul>` : ''}
+        ${L().length ? `<h3 style="font-size:15px">Saved positions</h3><ul class="tlist">${L().map((p, i) => `<li><span><b>${i + 1}</b> · ${esc(p.name)} <span class="note">(${p.type === 'move' ? 'stay' : 'press'})</span></span><button class="btn small" data-del="${i}">Delete</button></li>`).join('')}</ul>` : ''}
         <div class="btns"><span></span><button class="btn" id="tdone">Done</button></div></div></div>`;
       o.querySelectorAll('.tjoint').forEach(row => {
         const x = servos.find(s2 => s2.id === row.dataset.j); const rg = row.querySelector('input'), val = row.querySelector('.val');
@@ -775,10 +788,13 @@ nav.tabs .inner { max-width: 480px; margin: 0 auto; display: grid; grid-template
       o.querySelector('#tsave').onclick = () => {
         const name = o.querySelector('#tname').value.trim() || ('Position ' + n);
         const angles = {}; servos.filter(x => !isRoll(x)).forEach(x => angles[x.id] = Math.round(S.angle[x.id] ?? 0));
-        list.push({ name, type: o.querySelector('#ttype').value, angles });
+        const tnow = Date.now();
+        L().push({ id: 'p' + tnow.toString(36) + Math.random().toString(36).slice(2, 6), name, type: o.querySelector('#ttype').value, angles, c: tnow, t: tnow });
         save(); toast('Saved as position ' + n); draw();
       };
-      o.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { list.splice(+b.dataset.del, 1); save(); draw(); });
+      o.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { const gone = L().splice(+b.dataset.del, 1)[0];
+        if (gone) { const tb = S.tombs[board.host] = S.tombs[board.host] || {}; tb[pid(gone)] = Date.now(); store.set('tombs', S.tombs); }
+        save(); draw(); });
       const close = () => { o.innerHTML = ''; render(); };
       o.querySelector('#tdone').onclick = close;
       o.querySelector('#sbg').onclick = e => { if (e.target.id === 'sbg') close(); };
