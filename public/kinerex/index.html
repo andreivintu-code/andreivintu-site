@@ -810,7 +810,18 @@ nav.tabs .inner { max-width: 480px; margin: 0 auto; display: grid; grid-template
     const servos = S.devices.filter(x => x.host === host && p.angles[x.id] !== undefined && !isRoll(x));
     const before = {}; servos.forEach(x => before[x.id] = S.angle[x.id] ?? mv(x).rest);
     busy['pos' + host] = i; render();
-    const goAll = async (pose) => (await Promise.all(servos.map(x => { S.angle[x.id] = pose[x.id]; return setAngle(x, pose[x.id]); })))[0];
+    // One joint after another, not all at once: several servos starting together draw a current spike that can
+    // pull a cold or half-empty battery down far enough to reset the board. Joints already in place are skipped.
+    const goAll = async (pose) => { let r = 'ok', moved = false;
+      for (const x of servos) {
+        if (moved) await sleep(700);
+        const same = (S.angle[x.id] ?? null) === pose[x.id];
+        S.angle[x.id] = pose[x.id]; render();
+        if (same && moved) continue;
+        r = await setAngle(x, pose[x.id]); moved = true;
+        if (r !== 'ok' && r !== 'demo' && r !== 'sent') break;
+      }
+      return r; };
     let r = await goAll(p.angles);
     if (p.type !== 'move' && (r === 'ok' || r === 'demo' || r === 'sent')) { await sleep(900); r = await goAll(before); }
     delete busy['pos' + host];
