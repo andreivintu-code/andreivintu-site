@@ -154,6 +154,7 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .servo-label { font-size: 12px; font-weight: 800; color: var(--fg); }
 .posrow { display: flex; flex-wrap: wrap; gap: 6px; }
 .btn.pos { min-height: 44px; padding: 0 12px; font-size: 14px; display: inline-flex; align-items: center; gap: 8px; }
+.btn.pos.here { border-color: var(--accent); background: var(--accent-soft); font-weight: 700; box-shadow: 0 0 0 1px var(--accent) inset; }
 .btn.pos b { display: inline-flex; width: 22px; height: 22px; border-radius: 50%; align-items: center; justify-content: center; background: var(--accent); color: var(--surface); font-size: 12px; }
 .btn.teach { min-height: 44px; padding: 0 12px; font-size: 13px; border-style: dashed; }
 details.adv > summary { cursor: pointer; font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 4px 0; }
@@ -561,7 +562,11 @@ nav.tabs .inner { max-width: 480px; margin: 0 auto; display: grid; grid-template
         : ctl(d);
       // taught positions as the main controls; the servo controls move into Advanced
       const list = S.positions[d.host] || [];
-      const posRow = `<div class="posrow">${list.map((p, i) => `<button class="btn pos${busy['pos' + d.host] === i ? ' primary' : ''}" data-run="${esc(d.host)}" data-i="${i}" ${busy['pos' + d.host] !== undefined ? 'disabled' : ''}><b>${i + 1}</b>${esc(p.name)}</button>`).join('')}
+      // The position the finger is at now: every joint's current angle equals the saved one (the roll is ignored).
+      const here = p => { const ks = Object.keys(p.angles).filter(k => { const x = S.devices.find(y => y.id === k); return x && !isRoll(x); });
+        return ks.length > 0 && ks.every(k => Math.round(S.angle[k] ?? NaN) === Math.round(p.angles[k])); };
+      const posRow = `<div class="posrow">${list.map((p, i) => { const at = busy['pos' + d.host] === undefined && here(p);
+        return `<button class="btn pos${busy['pos' + d.host] === i ? ' primary' : ''}${at ? ' here' : ''}" data-run="${esc(d.host)}" data-i="${i}" ${busy['pos' + d.host] !== undefined ? 'disabled' : ''} ${at ? 'aria-current="true" title="The finger is here now"' : ''}><b>${i + 1}</b>${esc(p.name)}</button>`; }).join('')}
         ${extras.length >= 2 ? `<button class="btn pos" data-teach="${esc(d.id)}">Move finger</button>` : ''}<button class="btn teach" data-teach="${esc(d.id)}">${list.length ? 'Teach' : 'Teach first position'}</button></div>`;
       const open = S.adv[d.host] ?? !list.length;
       return `<section class="card" aria-label="${esc(d.name)}">${head}${extras.length ? `<div class="ctl-sub"><span>${esc(d.host)}</span></div>` : ''}${eye}${posRow}
