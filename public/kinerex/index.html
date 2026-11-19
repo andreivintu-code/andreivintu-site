@@ -171,6 +171,9 @@ details.adv[open] > summary { margin-bottom: 6px; }
 .batt { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 800; color: var(--muted); font-family: var(--mono); }
 .batt.low { color: var(--warn); }
 .batt svg { width: 20px; height: 11px; }
+.blog svg { width: 100%; height: 120px; display: block; }
+.blog .big { font-family: var(--mono); font-size: 22px; font-weight: 800; }
+.blog .row2 { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 6px 0 10px; }
 .tjoint { display: grid; grid-template-columns: 72px 44px minmax(0, 1fr) 44px 36px; gap: 8px; align-items: center; font-size: 13px; }
 .tjoint .val { font-family: var(--mono); font-variant-numeric: tabular-nums; text-align: right; }
 .tlist { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
@@ -352,7 +355,7 @@ nav.tabs .inner { max-width: 480px; margin: 0 auto; display: grid; grid-template
       } else if (t[2] === 'sensor') {
         const v = parseFloat(msg); if (!isFinite(v)) return;
         const st = S.status[h] = Object.assign({ state: 'online' }, S.status[h]);
-        if (t[3] === 'battery') st.bat = v; else if (t[3] === 'wi-fi_signal') st.wifi = v; else return;
+        if (t[3] === 'battery') { st.bat = v; logBat(h, v); } else if (t[3] === 'wi-fi_signal') st.wifi = v; else return;
       }
       if (changed) save();
       redrawSoon();
@@ -453,7 +456,7 @@ nav.tabs .inner { max-width: 480px; margin: 0 auto; display: grid; grid-template
       S.status[d.id] = { state: 'online', wifi };
       // Battery charge, when the board reads it ('Battery' sensor in %).
       if (!(d.servo > 1)) for (const k of ['battery', 'Battery']) {
-        try { const rb = await fetch(`${base(d)}/sensor/${k}`); if (rb.ok) { const jb = await rb.json(); if (typeof jb.value === 'number' && isFinite(jb.value)) S.status[d.id].bat = jb.value; break; } } catch (e) {}
+        try { const rb = await fetch(`${base(d)}/sensor/${k}`); if (rb.ok) { const jb = await rb.json(); if (typeof jb.value === 'number' && isFinite(jb.value)) { S.status[d.id].bat = jb.value; logBat(d.id, jb.value); } break; } } catch (e) {}
       }
     } catch (e) {
       if (viaMac) { S.status[d.id] = { state: 'offline', wifi: null }; return; }
@@ -487,6 +490,37 @@ nav.tabs .inner { max-width: 480px; margin: 0 auto; display: grid; grid-template
     if (st.state === 'online') return '<span class="pill p-good"><span class="dot"></span>Online</span>';
     if (st.state === 'demo') return '<span class="pill p-info"><span class="dot"></span>Demo</span>';
     return '<span class="pill p-warn"><span class="dot"></span>Offline</span>';
+  }
+  // ---------- battery log: every reading, with its time, kept on this device ----------
+  const BLOG = store.get('battlog', {}), BSTART = store.get('battstart', {});
+  function logBat(id, v) {
+    if (!isFinite(v)) return;
+    const now = Date.now(), L = BLOG[id] = BLOG[id] || [];
+    const last = L[L.length - 1];
+    if (last && now - last[0] < 60000 && Math.abs(last[1] - v) < 1) return;   // at most one point a minute
+    L.push([now, Math.round(v * 10) / 10]);
+    while (L.length && (now - L[0][0] > 7 * 864e5 || L.length > 4000)) L.shift();
+    if (!BSTART[id]) { BSTART[id] = now; store.set('battstart', BSTART); }
+    store.set('battlog', BLOG);
+  }
+  function battLogCard(d) {
+    const L = (BLOG[d.id] || []).filter(p => p[0] >= (BSTART[d.id] || 0));
+    const hm = t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const day = t => new Date(t).toLocaleDateString([], { weekday: 'short' });
+    if (!L.length) return `<section class="card blog" aria-label="Battery log"><h2>Battery log</h2><p class="note">No reading yet. Readings are saved here while this app is open, about one a minute.</p><button class="btn small" id="bstart">Start new count</button></section>`;
+    const a = L[0], z = L[L.length - 1], dt = (z[0] - a[0]) / 36e5, dp = z[1] - a[1];
+    const rate = dt > 0.2 ? dp / dt : null, cap = 2000;
+    const t0 = a[0], t1 = Math.max(z[0], t0 + 60000), W = 300, H = 120, px = t => 6 + (W - 12) * (t - t0) / (t1 - t0), py = v => 16 + (H - 30) * (1 - v / 100);
+    const pts = L.map(p => px(p[0]).toFixed(1) + ',' + py(p[1]).toFixed(1)).join(' ');
+    const grid = [0, 50, 100].map(v => `<line x1="6" x2="${W - 6}" y1="${py(v)}" y2="${py(v)}" stroke="var(--soft)"/><text x="${W - 6}" y="${py(v) - 2}" text-anchor="end" font-size="9" fill="var(--muted)">${v} %</text>`).join('');
+    const full = rate && rate > 0.3 && z[1] < 99 ? `<span>Full in about <b>${Math.ceil((100 - z[1]) / rate)} h</b></span>` : '';
+    return `<section class="card blog" aria-label="Battery log"><h2>Battery log</h2>
+      <div class="row2"><span class="big">${Math.round(a[1])} → ${Math.round(z[1])} %</span><span class="big" style="color:${dp >= 0 ? 'var(--good)' : 'var(--warn)'}">${dp >= 0 ? '+' : ''}${Math.round(dp)} %</span></div>
+      <div class="row2 note"><span>Since ${day(a[0])} ${hm(a[0])}, ${dt.toFixed(1)} h</span><span>≈ ${dp >= 0 ? '+' : ''}${Math.round(dp / 100 * cap)} mAh of ${cap}</span>${rate != null ? `<span>${rate >= 0 ? '+' : ''}${rate.toFixed(1)} % per hour</span>` : ''}${full}</div>
+      <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Battery charge over time">${grid}<polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/><circle cx="${px(z[0])}" cy="${py(z[1])}" r="3.5" fill="var(--accent)"/>
+        <text x="6" y="${H - 2}" font-size="9" fill="var(--muted)">${hm(a[0])}</text><text x="${W - 6}" y="${H - 2}" text-anchor="end" font-size="9" fill="var(--muted)">${hm(z[0])}</text></svg>
+      <p class="note">Saved while this app is open on this device. While charging the reading runs a little high; the true level shows 30 minutes after unplugging.</p>
+      <button class="btn small" id="bstart">Start new count</button></section>`;
   }
   function batt(st) {
     if (!st || st.bat == null) return '';
@@ -597,7 +631,8 @@ nav.tabs .inner { max-width: 480px; margin: 0 auto; display: grid; grid-template
       <section class="card" aria-label="Status"><h2>Status</h2>
         <dl class="kv"><dt>Connection</dt><dd>${st ? esc(st.state) : 'checking'}</dd><dt>Wi-Fi signal</dt><dd>${st && st.wifi != null ? Math.round(st.wifi) + ' dBm' : '–'}</dd><dt>Safety class of the press</dt><dd>${d.confirm ? 'confirm first' : 'safe'}</dd></dl>
         <button class="btn small" id="recheck">Check connection</button>
-      </section>`;
+      </section>
+      ${!(d.servo > 1) && (st && st.bat != null || (BLOG[d.id] || []).length) ? battLogCard(d) : ''}`;
   }
 
   function witnessCard() {
@@ -886,6 +921,7 @@ nav.tabs .inner { max-width: 480px; margin: 0 auto; display: grid; grid-template
       v.querySelector('#proof').onclick = () => d.confirm ? confirmSheet(d, () => proof(d)) : proof(d);
       const s = v.querySelector('#snap'); if (s) s.onclick = () => takePhoto(d);
       v.querySelector('#recheck').onclick = async () => { S.status[d.id] = null; render(); await ping(d); render(); };
+      const bs = v.querySelector('#bstart'); if (bs) bs.onclick = () => { BSTART[d.id] = Date.now(); store.set('battstart', BSTART); const st = S.status[d.id]; if (st && st.bat != null) { BLOG[d.id] = BLOG[d.id] || []; BLOG[d.id].push([Date.now(), st.bat]); store.set('battlog', BLOG); } render(); toast('New count started'); };
       v.querySelectorAll('[data-verdict]').forEach(b => b.onclick = () => {
         S.witness.verdict = b.dataset.verdict;
         addLog({ what: d.name + ': test press', result: b.dataset.verdict, photo: S.witness.after && S.witness.after.startsWith('data:') ? S.witness.after : S.witness.after });
