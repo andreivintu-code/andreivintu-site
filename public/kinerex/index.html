@@ -112,6 +112,15 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .grid2 .card { padding: 10px; gap: 8px; min-width: 0; }
 @media (max-width: 640px) { .grid2 { grid-template-columns: 1fr; } .grid2 .card { padding: 12px; } .grid2 .linkname { font-size: 16px; } }
 .grid2 .linkname { font-size: 14px; overflow-wrap: anywhere; }
+/* Live panel beside an annex: state on top, the newest events below */
+.live .kv { grid-template-columns: auto 1fr; font-size: 12px; gap: 2px 10px; margin: 0; }
+.live .kv dd { margin: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.live .feed { list-style: none; margin: 0; padding: 0; font-family: var(--mono); font-size: 11px; display: flex; flex-direction: column; gap: 2px; overflow-y: auto; min-height: 0; flex: 1; }
+.live .feed li { display: grid; grid-template-columns: auto 1fr; gap: 8px; }
+.live .feed time { color: var(--muted); }
+.live .feed .warn { color: var(--warn); font-weight: 700; }
+.live .feed .good { color: var(--good); }
+.live h2 { font-size: 14px; margin: 0; }
 .grid2 .row { gap: 6px; align-items: flex-start; }
 .grid2 .ctl-sub { flex-wrap: wrap; gap: 4px 8px; font-size: 11px; overflow-wrap: anywhere; }
 .grid2 .btns, .grid2 .btns3 { gap: 6px; }
@@ -317,7 +326,7 @@ nav.tabs .inner { max-width: 480px; margin: 0 auto; display: grid; grid-template
     let startT;
     mq.on('connect', () => {
       S.net = 'online'; render();
-      mq.subscribe([`${ROOT}/+/status`, `${ROOT}/+/number/+/state`, `${ROOT}/+/sensor/+/state`, `${ROOT}/+/photo`, `${ROOT}/app/state`], () => {
+      mq.subscribe([`${ROOT}/+/status`, `${ROOT}/+/number/+/state`, `${ROOT}/+/sensor/+/state`, `${ROOT}/+/text_sensor/+/state`, `${ROOT}/+/power`, `${ROOT}/+/photo`, `${ROOT}/app/state`], () => {
         // Retained messages arrive right after the subscription is confirmed. If no shared state comes, there is none yet.
         clearTimeout(startT); startT = setTimeout(() => { if (!pulled) takeShared({}); }, 2500);
       });
@@ -342,20 +351,26 @@ nav.tabs .inner { max-width: 480px; margin: 0 auto; display: grid; grid-template
         clearTimeout(startT); takeShared(st); return;
       }
       const h = t[1]; let changed = false;
+      if (t[2] === 'power' && t.length === 3) { onPower(h, msg); redrawSoon(); return; }
       if (t[2] === 'status') {
         changed = ensureBoard(h);
         const on = msg === 'online';
+        diagStatus(h, on);
+        if ((S.status[h] || {}).state !== (on ? 'online' : 'offline')) feed(h, on ? 'online' : 'offline', on ? 'good' : 'warn');
         S.devices.filter(d => d.host === h).forEach(d => { S.status[d.id] = Object.assign({}, S.status[d.id], { state: on ? 'online' : 'offline' }); });
         changed = true;
       } else if (t[2] === 'number') {
         const m = /^servo(?:_(\d+))?_angle$/.exec(t[3]); if (!m) return;
         const n = m[1] ? +m[1] : 1; changed = ensureServo(h, n);
         const id = n === 1 ? h : `${h}#${n}`; const v = parseFloat(msg);
+        if (isFinite(v) && Math.round(S.angle[id] ?? NaN) !== Math.round(v)) feed(h, `servo ${n} at ${Math.round(v)}`);
         if (isFinite(v) && !busy[id]) S.angle[id] = v;
       } else if (t[2] === 'sensor') {
         const v = parseFloat(msg); if (!isFinite(v)) return;
         const st = S.status[h] = Object.assign({ state: 'online' }, S.status[h]);
-        if (t[3] === 'battery') { st.bat = v; logBat(h, v); } else if (t[3] === 'wi-fi_signal') st.wifi = v; else return;
+        if (t[3] === 'battery') { st.bat = v; logBat(h, v); } else if (t[3] === 'battery_voltage') { if (st.volt == null || Math.abs(st.volt - v) >= 0.03) feed(h, `battery ${v.toFixed(2)} V`); st.volt = v; } else if (t[3] === 'wi-fi_signal') { if (st.wifi == null || Math.abs(st.wifi - v) >= 6) feed(h, `Wi-Fi ${Math.round(v)} dBm`); st.wifi = v; } else if (t[3] === 'uptime') diagUptime(h, v); else return;
+      } else if (t[2] === 'text_sensor') {
+        if (t[3] === 'reset_reason') { if ((DIAG[h] || {}).reason !== msg) feed(h, 'last restart: ' + reasonText(msg)); diagReason(h, msg); } else return;
       }
       if (changed) save();
       redrawSoon();
@@ -423,6 +438,7 @@ nav.tabs .inner { max-width: 480px; margin: 0 auto; display: grid; grid-template
     if ((S.status[d.host] || {}).state === 'offline') return 'offline';
     const payload = kind === 'button' ? 'PRESS' : String((/value=([^&]+)/.exec(query || '') || [])[1] ?? '');
     mq.publish(`${ROOT}/${d.host}/${kind}/${objectId}/command`, payload, { qos: 0 });
+    feed(d.host, `→ ${objectId.replace(/_angle$/, '').replace(/_/g, ' ')} ${payload}`, 'cmd');
     return 'ok';
   }
 
@@ -534,7 +550,84 @@ nav.tabs .inner { max-width: 480px; margin: 0 auto; display: grid; grid-template
     const m = { online: ['p-good', 'Online'], connecting: ['p-warn', 'Connecting…'], offline: ['p-bad', 'No connection'], denied: ['p-bad', 'Login refused'] }[S.net] || ['p-warn', '…'];
     return `<span class="pill ${m[0]}"><span class="dot"></span>${m[1]}</span>`;
   }
-  function addLog(entry) { S.log.unshift(Object.assign({ time: now() }, entry)); save(); }
+  function addLog(entry) { const e = Object.assign({ time: now() }, entry); S.log.unshift(e); save(); return e; }
+
+  // ---------- connection log: offline / back online / restarted, with the reason the annex reports ----------
+  // Uptime gives the moment of the last start (now − uptime), so a restart is found even if this app was closed at the time.
+  const DIAG = store.get('diag', {});
+  const hm = t => { const d = new Date(t), td = new Date(); const s = d.toTimeString().slice(0, 5); return d.toDateString() === td.toDateString() ? s : d.toLocaleDateString([], { weekday: 'short' }) + ' ' + s; };
+  const annexName = h => { const d = S.devices.find(x => x.host === h && !(x.servo > 1)); return d ? d.name : h; };
+  const pendingRestart = {};
+  const reasonText = r => { const x = String(r || '').toLowerCase(); return /brown/.test(x) ? 'brownout (supply voltage dipped)' : /power.?on/.test(x) ? 'power switched on' : /software|esp_restart|reboot/.test(x) ? 'software restart (e.g. a new install)' : /watchdog|wdt/.test(x) ? 'watchdog (the program hung)' : /panic|exception/.test(x) ? 'crash' : (r || 'reason not reported yet'); };
+  function diagSave() { store.set('diag', DIAG); }
+  function diagStatus(h, on) {
+    const D = DIAG[h] = DIAG[h] || {};
+    const was = D.online;
+    D.online = on; diagSave();
+    if (was === undefined || was === on) return;            // first message, or no change
+    if (!on) { D.offAt = Date.now(); addLog({ what: annexName(h) + ': went offline', result: 'Offline' }); }
+    else addLog({ what: annexName(h) + ': back online' + (D.offAt ? ' after ' + Math.max(1, Math.round((Date.now() - D.offAt) / 60000)) + ' min' : ''), result: 'Online' });
+  }
+  function diagUptime(h, sec) {
+    const D = DIAG[h] = DIAG[h] || {};
+    const boot = Date.now() - sec * 1000;
+    D.uptime = sec; D.upAt = Date.now();
+    if (D.boot && boot - D.boot > 120000) {                  // a start later than the one we knew: it restarted
+      const e = { what: annexName(h) + ': restarted at ' + hm(boot) + ' · ' + reasonText(D.reason), result: 'Restarted' };
+      pendingRestart[h] = { e: addLog(e), t: Date.now() }; D.lastRestart = boot;
+    }
+    if (!D.boot || Math.abs(boot - D.boot) > 120000) D.boot = boot;
+    diagSave();
+  }
+  function diagReason(h, r) {
+    const D = DIAG[h] = DIAG[h] || {};
+    D.reason = r;
+    const p = pendingRestart[h];
+    if (p && Date.now() - p.t < 180000) { p.e.what = p.e.what.replace(/ · .*$/, ' · ' + reasonText(r)); delete pendingRestart[h]; save(); }
+    diagSave();
+  }
+  // ---------- live feed per annex: every message and command with its second ----------
+  const FEED = store.get('feed', {});
+  let feedSaveT;
+  function feed(h, x, k) {
+    const L = FEED[h] = FEED[h] || [];
+    L.unshift({ t: Date.now(), x, k: k || '' });
+    if (L.length > 80) L.length = 80;
+    clearTimeout(feedSaveT); feedSaveT = setTimeout(() => store.set('feed', FEED), 1500);
+  }
+  function onPower(h, msg) {
+    let p; try { p = JSON.parse(msg); } catch (e) { return; }
+    const st = S.status[h] = Object.assign({}, S.status[h]);
+    const was = st.power && st.power.state;
+    p.at = Date.now(); st.power = p;
+    if (p.state === 'sleep') {
+      const next = p.minutes ? hm(Date.now() + p.minutes * 60000) : '';
+      const why = p.reason === 'low_battery' ? `low battery${p.v ? ' ' + Number(p.v).toFixed(2) + ' V' : ''}` : (p.reason || 'sleep mode');
+      feed(h, `asleep: ${why}${next ? ', next check ' + next : ''}`, 'warn');
+      if (was !== 'sleep') addLog({ what: `${annexName(h)}: asleep, ${why}${next ? ', next check ' + next : ''}`, result: 'Asleep' });
+    } else if (p.state === 'ready' && was && was !== 'ready') feed(h, 'awake, ready', 'good');
+  }
+  function liveCard(d) {
+    const h = d.host, st = S.status[d.id] || {}, D = DIAG[h] || {}, P = st.power;
+    const tm = t => new Date(t).toTimeString().slice(0, 8);
+    const L = (BLOG[d.id] || []).filter(p => Date.now() - p[0] < 20 * 60000);
+    const rate = L.length > 2 && (L[L.length - 1][0] - L[0][0]) > 5 * 60000 ? (L[L.length - 1][1] - L[0][1]) / ((L[L.length - 1][0] - L[0][0]) / 36e5) : null;
+    const power = !P ? '–' : P.state === 'sleep' ? `asleep (${P.reason === 'low_battery' ? 'low battery' : esc(P.reason || '')})${P.minutes ? ', next check ' + hm(P.at + P.minutes * 60000) : ''}` : 'ready';
+    const bat = st.bat != null || st.volt != null ? `${st.volt != null ? st.volt.toFixed(2) + ' V' : ''}${st.bat != null ? ' · ' + Math.round(st.bat) + ' %' : ''}${rate != null ? ` · ${rate >= 0 ? '+' : ''}${rate.toFixed(0)} %/h` : ''}` : '–';
+    let up = '–';
+    if (D.uptime != null) { const u = D.uptime + (Date.now() - D.upAt) / 1000; up = `${hm(D.boot)} (${Math.floor(u / 3600) ? Math.floor(u / 3600) + ' h ' : ''}${Math.floor(u % 3600 / 60)} min)`; }
+    const items = (FEED[h] || []).slice(0, 40).map(e => `<li><time>${tm(e.t)}</time><span class="${e.k === 'warn' ? 'warn' : e.k === 'good' ? 'good' : ''}">${esc(e.x)}</span></li>`).join('');
+    return `<section class="card live" aria-label="Live: ${esc(d.name)}">
+      <div class="row"><h2>Live · ${esc(d.name)}</h2><span class="panel-head">${pill(st.state ? st : null)}</span></div>
+      <dl class="kv"><dt>Power</dt><dd>${power}</dd><dt>Battery</dt><dd>${bat}</dd><dt>Wi-Fi</dt><dd>${st.wifi != null ? Math.round(st.wifi) + ' dBm' : '–'}</dd><dt>Running since</dt><dd>${up}</dd><dt>Last restart</dt><dd>${D.reason ? esc(reasonText(D.reason)) : '–'}</dd></dl>
+      <ol class="feed" aria-label="Newest events first">${items || '<li><span>Waiting for the first message…</span></li>'}</ol>
+    </section>`;
+  }
+  function diagRows(d) {
+    const D = DIAG[d.host]; if (!D || D.uptime == null) return '';
+    const up = D.uptime + (Date.now() - D.upAt) / 1000, hrs = Math.floor(up / 3600), min = Math.floor(up % 3600 / 60);
+    return `<dt>Running since</dt><dd>${hm(D.boot)} (${hrs ? hrs + ' h ' : ''}${min} min)</dd><dt>Last restart reason</dt><dd>${esc(reasonText(D.reason))}</dd>`;
+  }
 
   // ---------- views ----------
   function home() {
@@ -604,7 +697,7 @@ nav.tabs .inner { max-width: 480px; margin: 0 auto; display: grid; grid-template
         ${extras.length >= 2 ? `<button class="btn pos" data-teach="${esc(d.id)}">Move finger</button>` : ''}<button class="btn teach" data-teach="${esc(d.id)}">${list.length ? 'Teach' : 'Teach first position'}</button></div>`;
       const open = S.adv[d.host] ?? !list.length;
       return `<section class="card" aria-label="${esc(d.name)}">${head}${extras.length ? `<div class="ctl-sub"><span>${esc(d.host)}</span></div>` : ''}${eye}${posRow}
-        <details class="adv" data-adv="${esc(d.host)}" ${open ? 'open' : ''}><summary>Advanced: servo controls</summary>${ctls}</details></section>`;
+        <details class="adv" data-adv="${esc(d.host)}" ${open ? 'open' : ''}><summary>Advanced: servo controls</summary>${ctls}</details></section>${cloud || S.demo ? liveCard(d) : ''}`;
     }).join('');
     return `<header class="top"><div class="row"><p class="eyebrow">KineRex · ${boards.length} annexes</p><span class="panel-head">${viaMac ? `<button class="btn small" id="search" ${S.searching ? 'disabled' : ''}>${S.searching ? 'Searching…' : 'Search again'}</button>` : ''}${modePill()}</span></div><h1>Machines</h1>${S.devices.filter(x => x.sync).length > 1 ? `<p class="note sync-note">Sync on: ${S.devices.filter(x => x.sync).length} servos move together.</p>` : ''}</header>
       ${cards ? `<div class="grid2">${cards}</div>` : '<p class="note">No annexes yet. Tap Search again.</p>'}`;
@@ -629,7 +722,7 @@ nav.tabs .inner { max-width: 480px; margin: 0 auto; display: grid; grid-template
       </section>
       ${S.witness && S.witness.device === d.id ? witnessCard() : ''}
       <section class="card" aria-label="Status"><h2>Status</h2>
-        <dl class="kv"><dt>Connection</dt><dd>${st ? esc(st.state) : 'checking'}</dd><dt>Wi-Fi signal</dt><dd>${st && st.wifi != null ? Math.round(st.wifi) + ' dBm' : '–'}</dd><dt>Safety class of the press</dt><dd>${d.confirm ? 'confirm first' : 'safe'}</dd></dl>
+        <dl class="kv"><dt>Connection</dt><dd>${st ? esc(st.state) : 'checking'}</dd><dt>Wi-Fi signal</dt><dd>${st && st.wifi != null ? Math.round(st.wifi) + ' dBm' : '–'}</dd><dt>Safety class of the press</dt><dd>${d.confirm ? 'confirm first' : 'safe'}</dd>${diagRows(d)}</dl>
         <button class="btn small" id="recheck">Check connection</button>
       </section>
       ${!(d.servo > 1) && (st && st.bat != null || (BLOG[d.id] || []).length) ? battLogCard(d) : ''}`;
@@ -650,13 +743,13 @@ nav.tabs .inner { max-width: 480px; margin: 0 auto; display: grid; grid-template
 
   function log() {
     const items = S.log.length ? S.log.map(e => `<li><time>${esc(e.time)}</time><span class="what">${esc(e.what)}
-      <span class="pill ${e.result === 'Done' || e.result === 'ok' || e.result === 'demo' ? 'p-good' : e.result === 'Mismatch' ? 'p-warn' : 'p-idle'}" style="align-self:flex-start"><span class="dot"></span>${esc(e.result)}</span></span>
+      <span class="pill ${e.result === 'Done' || e.result === 'ok' || e.result === 'demo' || e.result === 'Online' ? 'p-good' : e.result === 'Mismatch' || e.result === 'Offline' || e.result === 'Restarted' ? 'p-warn' : 'p-idle'}" style="align-self:flex-start"><span class="dot"></span>${esc(e.result)}</span></span>
       ${e.photo ? `<img src="${esc(e.photo)}" alt="Photo after: ${esc(e.what)}">` : ''}</li>`).join('')
       : '<li><span class="what">Nothing yet. Run a test press from an annex.</span></li>';
     return `<header class="top"><p class="eyebrow">This phone</p><h1>Log</h1></header>
       <ol class="log">${items}</ol>
       ${S.log.length ? '<button class="btn small" id="clearLog">Clear log</button>' : ''}
-      <p class="note">The log lives on this phone only. In stage 2 the annex keeps it and sends it through the cloud.</p>`;
+      <p class="note">The log lives on this device. Offline and back-online times are recorded while the app is open; a restart is found later too, from the annex's uptime, with the reason it reports.</p>`;
   }
 
   function setup() {
