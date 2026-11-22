@@ -112,6 +112,16 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .grid2 .card { padding: 10px; gap: 8px; min-width: 0; }
 @media (max-width: 640px) { .grid2 { grid-template-columns: 1fr; } .grid2 .card { padding: 12px; } .grid2 .linkname { font-size: 16px; } }
 .grid2 .linkname { font-size: 14px; overflow-wrap: anywhere; }
+/* What the annex can do: software and hardware, each with its state */
+.info h3 { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 4px 0 0; }
+.info ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; font-size: 12px; }
+.info li { display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: baseline; }
+.info li b { font-weight: 700; }
+.info li span.d { color: var(--muted); }
+.info .tag { font-size: 10px; font-weight: 700; border-radius: 6px; padding: 1px 6px; white-space: nowrap; }
+.info .t-on { background: var(--good-soft); color: var(--good); }
+.info .t-wait { background: var(--accent-soft); color: var(--accent-ink); }
+.info .t-next { background: transparent; color: var(--muted); border: 1px dashed var(--muted); }
 /* Live panel beside an annex: state on top, the newest events below */
 .live .kv { grid-template-columns: auto 1fr; font-size: 12px; gap: 2px 10px; margin: 0; }
 .live .kv dd { margin: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
@@ -144,6 +154,7 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
   .app.wide .main.fit { flex: none; min-height: 0; height: calc(100vh - 8px); box-sizing: border-box; display: grid; grid-template-rows: auto minmax(0, 1fr); }
   .main.fit .grid2 { flex: 1; min-height: 0; grid-auto-rows: minmax(0, 1fr); }
   .main.fit .grid2 .card { min-height: 0; overflow: hidden; }
+  .main.fit .grid2 .card.info { overflow-y: auto; }
   .main.fit .grid2 .photo { flex: 1 1 0; height: auto; min-height: 60px; }
   .grid2 .btn { min-height: 36px; font-size: 13px; }
   .grid2 .btn.big { min-height: 42px; font-size: 15px; }
@@ -623,6 +634,45 @@ nav.tabs .inner { max-width: 480px; margin: 0 auto; display: grid; grid-template
       <ol class="feed" aria-label="Newest events first">${items || '<li><span>Waiting for the first message…</span></li>'}</ol>
     </section>`;
   }
+  // ---------- what this annex can do: main functions of software and hardware, with their state ----------
+  // "active" = the annex has reported it; "installed" = in the firmware file, waiting for its first report; "next" = planned
+  function infoCard(d) {
+    const h = d.host, st = S.status[d.id] || {}, D = DIAG[h] || {};
+    const seen = { power: !!st.power, diag: D.uptime != null, bat: st.bat != null || st.volt != null, photo: !!lastPhoto[h], online: st.state === 'online' || st.state === 'offline' };
+    const tag = k => k === 'on' ? '<span class="tag t-on">active</span>' : k === 'wait' ? '<span class="tag t-wait">installed</span>' : '<span class="tag t-next">next</span>';
+    const li = (k, name, desc) => `<li>${tag(k)}<span><b>${name}</b> <span class="d">${desc}</span></span></li>`;
+    return `<section class="card info" aria-label="What ${esc(d.name)} can do">
+      <div class="row"><h2>${esc(d.name)} · functions</h2></div>
+      <h3>Software on the annex</h3>
+      <ul>
+        ${li(seen.power ? 'on' : 'wait', 'Ready mode', 'stays connected, Wi-Fi dozes between messages; commands arrive within about 1 s')}
+        ${li(seen.power ? 'on' : 'wait', 'Low-battery guard', 'two readings under 3.40 V a minute apart: warns the app, sleeps 30 min, checks again')}
+        ${li(seen.diag ? 'on' : 'wait', 'Diagnostics', 'running since and the reason of the last restart (brownout, new install, crash)')}
+        ${li(seen.bat ? 'on' : 'wait', 'Battery reading', 'voltage and % every 30 s through the D4 divider')}
+        ${li(seen.photo ? 'on' : 'wait', 'Eye', 'photo on request, 800 × 600, sent through the cloud')}
+        ${li('on', 'Joints', 'J1–J3 smooth moves of 0.6–0.8 s, J4 finger roll; motors switch off 2 s after a move')}
+        ${li(seen.online ? 'on' : 'wait', 'Cloud link', 'EMQX in Frankfurt over TLS; the broker reports offline the moment it drops')}
+        ${li('next', 'Sleep mode', 'deep sleep, wakes every 30 s for waiting commands; Wake up button for 5 min of instant response')}
+        ${li('next', 'Staggered starts', 'joints start 0.1–0.2 s apart so their start-up currents do not add up')}
+      </ul>
+      <h3>App</h3>
+      <ul>
+        ${li('on', 'Positions', 'taught positions shared between all your devices; a position moves its joints one after another')}
+        ${li('on', 'Logs', 'connection log, battery log with charge counter, and this live feed')}
+      </ul>
+      <h3>Hardware</h3>
+      <ul>
+        ${li('on', 'Brain and eye', 'XIAO ESP32-S3 Sense; camera on a ribbon, under the arm link in the product')}
+        ${li('on', 'Battery', 'LiPo 2000 mAh with protection; charges over the XIAO USB-C at about 50 mA')}
+        ${li('on', 'Servo power', 'MT3608 boost to 5.0 V for the servos')}
+        ${li('wait', 'Supercaps', '2 × 10 F in series on the 5 V servo rail, 47 kΩ balancing each; carry the start-up spikes')}
+        ${li('wait', 'Solar', '0.8 W panel through the HW-736 (CN3065) charger to the battery')}
+        ${li('next', 'Stronger boost', 'Pololu U3V40F5, about 2.3–2.5 A at 5 V, replaces the MT3608')}
+        ${li('next', 'Brain buffer', '470 µF at the XIAO battery pads, rides through what is left of a dip')}
+      </ul>
+      <p class="note"><b>active</b> reported by the annex · <b>installed</b> fitted or in the firmware, not reported yet · <b>next</b> planned</p>
+    </section>`;
+  }
   function diagRows(d) {
     const D = DIAG[d.host]; if (!D || D.uptime == null) return '';
     const up = D.uptime + (Date.now() - D.upAt) / 1000, hrs = Math.floor(up / 3600), min = Math.floor(up % 3600 / 60);
@@ -697,7 +747,7 @@ nav.tabs .inner { max-width: 480px; margin: 0 auto; display: grid; grid-template
         ${extras.length >= 2 ? `<button class="btn pos" data-teach="${esc(d.id)}">Move finger</button>` : ''}<button class="btn teach" data-teach="${esc(d.id)}">${list.length ? 'Teach' : 'Teach first position'}</button></div>`;
       const open = S.adv[d.host] ?? !list.length;
       return `<section class="card" aria-label="${esc(d.name)}">${head}${extras.length ? `<div class="ctl-sub"><span>${esc(d.host)}</span></div>` : ''}${eye}${posRow}
-        <details class="adv" data-adv="${esc(d.host)}" ${open ? 'open' : ''}><summary>Advanced: servo controls</summary>${ctls}</details></section>${cloud || S.demo ? liveCard(d) : ''}`;
+        <details class="adv" data-adv="${esc(d.host)}" ${open ? 'open' : ''}><summary>Advanced: servo controls</summary>${ctls}</details></section>${cloud || S.demo ? liveCard(d) : ''}${d.host === 'finger-annex' ? infoCard(d) : ''}`;
     }).join('');
     return `<header class="top"><div class="row"><p class="eyebrow">KineRex · ${boards.length} annexes</p><span class="panel-head">${viaMac ? `<button class="btn small" id="search" ${S.searching ? 'disabled' : ''}>${S.searching ? 'Searching…' : 'Search again'}</button>` : ''}${modePill()}</span></div><h1>Machines</h1>${S.devices.filter(x => x.sync).length > 1 ? `<p class="note sync-note">Sync on: ${S.devices.filter(x => x.sync).length} servos move together.</p>` : ''}</header>
       ${cards ? `<div class="grid2">${cards}</div>` : '<p class="note">No annexes yet. Tap Search again.</p>'}`;
