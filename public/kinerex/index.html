@@ -61,6 +61,9 @@ h2 { margin: 0; font-size: 12px; font-weight: 800; letter-spacing: .08em; color:
 .photo { position: relative; border-radius: 14px; overflow: hidden; background: var(--panel); aspect-ratio: 4 / 3; max-width: 100%; }
 .photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .photo .cap { position: absolute; inset: 0 0 auto 0; display: flex; justify-content: space-between; padding: 5px 10px; font-size: 11px; font-weight: 800; color: #F2F4F7; background: rgba(20,22,26,.6); }
+.lightsel { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--muted); min-height: 44px; }
+.lightsel select { font: inherit; font-weight: 600; color: var(--fg); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; min-height: 40px; padding: 0 8px; }
+.darknote { margin: 6px 0 0; }
 .photo .empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 20px; color: var(--panel-ink); font-size: 13px; }
 
 .btn { font: inherit; font-weight: 800; font-size: 15px; min-height: 48px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); padding: 0 16px; cursor: pointer; }
@@ -341,7 +344,7 @@ nav.tabs .inner { max-width: 480px; margin: 0 auto; display: grid; grid-template
     let startT;
     mq.on('connect', () => {
       S.net = 'online'; render();
-      mq.subscribe([`${ROOT}/+/status`, `${ROOT}/+/number/+/state`, `${ROOT}/+/sensor/+/state`, `${ROOT}/+/text_sensor/+/state`, `${ROOT}/+/power`, `${ROOT}/+/photo`, `${ROOT}/app/state`], () => {
+      mq.subscribe([`${ROOT}/+/status`, `${ROOT}/+/number/+/state`, `${ROOT}/+/sensor/+/state`, `${ROOT}/+/text_sensor/+/state`, `${ROOT}/+/power`, `${ROOT}/+/photo`, `${ROOT}/+/select/+/state`, `${ROOT}/app/state`], () => {
         // Retained messages arrive right after the subscription is confirmed. If no shared state comes, there is none yet.
         clearTimeout(startT); startT = setTimeout(() => { if (!pulled) takeShared({}); }, 2500);
       });
@@ -355,11 +358,12 @@ nav.tabs .inner { max-width: 480px; margin: 0 auto; display: grid; grid-template
         const h = t[1]; ensureBoard(h);
         S.devices.filter(d => d.host === h && !(d.servo > 1)).forEach(d => d.camera = true);
         if (lastPhoto[h] && lastPhoto[h].startsWith('blob:')) URL.revokeObjectURL(lastPhoto[h]);
-        lastPhoto[h] = URL.createObjectURL(new Blob([buf], { type: 'image/jpeg' })); lastPhoto[h + '_t'] = now();
+        lastPhoto[h] = URL.createObjectURL(new Blob([buf], { type: 'image/jpeg' })); lastPhoto[h + '_t'] = now(); checkDark(h, lastPhoto[h]);
         (photoWait[h] || []).forEach(f => f(lastPhoto[h])); photoWait[h] = [];
         save(); redrawSoon(); return;
       }
       const msg = buf.toString();
+      if (t[2] === 'select' && t[3] === 'eye_light_mode') { LIGHT[t[1]] = msg; redrawSoon(); return; }
       if (t[1] === 'app' && t[2] === 'state') {
         let st; try { st = JSON.parse(msg); } catch (e) { return; }
         if (st.from === myId) return;                   // my own update coming back
@@ -559,6 +563,22 @@ nav.tabs .inner { max-width: 480px; margin: 0 auto; display: grid; grid-template
     return `<span class="batt${p < 20 ? ' low' : ''}" title="Battery ${p} %"><svg viewBox="0 0 20 11" aria-hidden="true"><rect x=".5" y=".5" width="17" height="10" rx="2" fill="none" stroke="currentColor"/><rect x="18" y="3.5" width="1.5" height="4" fill="currentColor"/><rect x="2" y="2" width="${(14 * p / 100).toFixed(1)}" height="7" rx="1" fill="currentColor"/></svg>${p} %</span>`;
   }
   const lastPhoto = {};
+  // Light for the eye: firmware select eye_light_mode (photo = on only for the photo, on, off), set from the app.
+  const LIGHT = {}, DARK = {};
+  const LIGHT_OPTS = [['photo', 'With photo'], ['on', 'On'], ['off', 'Off']];
+  // A photo whose average brightness is very low is marked as too dark, so the app can say why nothing shows.
+  function checkDark(h, url) {
+    const img = new Image();
+    img.onload = () => { try {
+      const c = document.createElement('canvas'); c.width = 32; c.height = 24; const g = c.getContext('2d');
+      g.drawImage(img, 0, 0, 32, 24); const px = g.getImageData(0, 0, 32, 24).data; let sum = 0;
+      for (let i = 0; i < px.length; i += 4) sum += 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2];
+      const dark = sum / (px.length / 4) < 28; if (DARK[h] !== dark) { DARK[h] = dark; redrawSoon(); }
+    } catch (e) {} };
+    img.src = url;
+  }
+  const lightCtl = d => cloud && d.camera ? `<label class="lightsel">Light <select data-light="${esc(d.host)}" aria-label="Light for the eye of ${esc(d.name)}">${LIGHT_OPTS.map(([v, t]) => `<option value="${v}" ${(LIGHT[d.host] || 'photo') === v ? 'selected' : ''}>${t}</option>`).join('')}</select></label>` : '<span></span>';
+  const darkNote = d => DARK[d.host] ? `<p class="note darknote">Too dark to see. ${(LIGHT[d.host] || 'off') === 'off' ? 'Set Light to <b>With photo</b> (needs the white light on D5).' : 'The light is set, but the photo is still dark: check the LEDs on D5.'}</p>` : '';
   function modePill() {
     if (S.demo) return '<span class="pill p-info"><span class="dot"></span>Demo</span>';
     if (!cloud) return '<span class="pill p-good"><span class="dot"></span>Local</span>';
@@ -654,6 +674,7 @@ nav.tabs .inner { max-width: 480px; margin: 0 auto; display: grid; grid-template
         ${li(seen.diag ? 'on' : 'wait', 'Diagnostics', 'running since and the reason of the last restart (brownout, new install, crash)')}
         ${li(seen.bat ? 'on' : 'wait', 'Battery reading', 'voltage and % every 30 s through the D4 divider')}
         ${li(seen.photo ? 'on' : 'wait', 'Eye', 'photo on request, 800 × 600, sent through the cloud')}
+        ${li(LIGHT[h] ? 'on' : 'next', 'Light for the eye', 'white LEDs on D5, on with the photo, on or off; set under the photo; dark photos are flagged')}
         ${li('on', 'Joints', 'J1–J3 smooth moves of 0.6–0.8 s, J4 finger roll; motors switch off 2 s after a move')}
         ${li(seen.online ? 'on' : 'wait', 'Cloud link', 'EMQX in Frankfurt over TLS; the broker reports offline the moment it drops')}
         ${li('next', 'Sleep mode', 'deep sleep, wakes every 30 s for waiting commands; Wake up button for 5 min of instant response')}
@@ -736,7 +757,7 @@ nav.tabs .inner { max-width: 480px; margin: 0 auto; display: grid; grid-template
       const eye = d.camera
         ? `<section class="photo" aria-label="Photo from the eye of ${esc(d.name)}">${ph ? `<img src="${esc(ph)}" alt="Latest photo from ${esc(d.name)}">` : '<div class="empty">No photo yet. Tap Take photo.</div>'}
            <div class="cap"><span>EYE · SNAPSHOT</span><span>${esc(lastPhoto[d.host + '_t'] || '')}</span></div></section>
-           <div class="btns"><button class="btn small" data-snap="${esc(d.id)}">Take photo</button>${!S.demo && !cloud ? `<a class="btn small" style="display:flex;align-items:center;justify-content:center;text-decoration:none" href="http://${esc(d.host)}:8080" target="_blank" rel="noopener">Live view</a>` : '<span></span>'}</div>`
+           ${darkNote(d)}<div class="btns"><button class="btn small" data-snap="${esc(d.id)}">Take photo</button>${!S.demo && !cloud ? `<a class="btn small" style="display:flex;align-items:center;justify-content:center;text-decoration:none" href="http://${esc(d.host)}:8080" target="_blank" rel="noopener">Live view</a>` : lightCtl(d)}</div>`
         : '';
       const ctls = extras.length
         ? `<div class="ctls-multi">${ctl(d, 'Servo 1') + extras.map(x => ctl(x, 'Servo ' + x.servo)).join('')}</div>`
@@ -763,7 +784,7 @@ nav.tabs .inner { max-width: 480px; margin: 0 auto; display: grid; grid-template
     const photo = d.camera || S.demo
       ? `<section class="photo" aria-label="Photo from the eye">${ph ? `<img src="${esc(ph)}" alt="Latest photo from the eye">` : '<div class="empty">No photo yet. Tap Take photo.</div>'}
          <div class="cap"><span>EYE · SNAPSHOT</span><span id="snapTime">${esc(lastPhoto[d.id + '_t'] || '')}</span></div></section>
-         <div class="btns"><button class="btn small" id="snap">Take photo</button>${!S.demo && !cloud ? `<a class="btn small" style="display:flex;align-items:center;justify-content:center;text-decoration:none" href="http://${esc(d.host)}:8080" target="_blank" rel="noopener">Live view for aiming</a>` : '<span></span>'}</div>`
+         ${darkNote(d)}<div class="btns"><button class="btn small" id="snap">Take photo</button>${!S.demo && !cloud ? `<a class="btn small" style="display:flex;align-items:center;justify-content:center;text-decoration:none" href="http://${esc(d.host)}:8080" target="_blank" rel="noopener">Live view for aiming</a>` : lightCtl(d)}</div>`
       : `<div class="card"><p class="note">This annex has no eye. Pair it with the test plate eye for photo proof.</p></div>`;
     return `<header class="top"><p class="eyebrow">${esc(d.host)}</p><div class="row"><h1>${esc(d.name)}</h1><span class="panel-head">${batt(st)}${pill(st)}</span></div></header>
       ${photo}
@@ -1060,6 +1081,11 @@ nav.tabs .inner { max-width: 480px; margin: 0 auto; display: grid; grid-template
   function wire(r) {
     const v = document.getElementById('view');
     v.querySelectorAll('[data-open]').forEach(b => b.onclick = () => { S.current = b.dataset.open; save(); location.hash = 'annex'; });
+    v.querySelectorAll('[data-light]').forEach(sel => sel.onchange = () => {
+        const h = sel.dataset.light; LIGHT[h] = sel.value;
+        if (mq && mq.connected) { mq.publish(`${ROOT}/${h}/select/eye_light_mode/command`, sel.value, { qos: 0 }); toast('Light: ' + sel.options[sel.selectedIndex].text); }
+        else toast('Not connected to the cloud');
+      });
     if (r === 'annex') {
       const d = dev(S.current);
       const a = v.querySelector('#angle'), out = v.querySelector('#angleOut');
