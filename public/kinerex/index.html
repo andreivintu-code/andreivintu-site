@@ -239,7 +239,11 @@ nav.tabs .inner { max-width: 480px; margin: 0 auto; display: grid; grid-template
   };
   const onHttps = location.protocol === 'https:';
   // Served by serve-app.command on the Mac: live mode, annexes found automatically.
-  const viaMac = location.protocol === 'http:';
+  // Only a page served from the home network (an IP address, localhost or a .local name) counts as the Mac.
+  // Anything else, even opened as http://, is the online app and shows the cloud sign-in.
+  const localHost = /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|\[?::1\]?$)|\.local$/i.test(location.hostname);
+  const viaMac = location.protocol === 'http:' && localHost;
+  if (location.protocol === 'http:' && !localHost) location.replace('https://' + location.host + location.pathname + location.hash);
   // Online (any network): annexes and app meet at an MQTT broker in the cloud. The login is kept on this device only.
   const cloudCfg = viaMac ? null : store.get('cloud', null);
   const cloud = !!(cloudCfg && cloudCfg.host);
